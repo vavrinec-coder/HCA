@@ -90,12 +90,15 @@ def calculate_payroll_outputs(
                 cogs_salary_totals[department][index] += monthly_salary
 
             status_rates = benefit_rates.get(status, ZERO_BENEFIT_RATES)
-            medical_totals[department][index] += fte * status_rates["medical"]
+            benefit_multiplier = 1.0 if fte > 0 else 0.0
+            medical_totals[department][index] += (
+                benefit_multiplier * status_rates["medical"]
+            )
             retirement_401k_totals[department][index] += (
-                fte * status_rates["retirement401k"]
+                benefit_multiplier * status_rates["retirement401k"]
             )
             other_benefits_totals[department][index] += (
-                fte * status_rates["otherBenefits"]
+                benefit_multiplier * status_rates["otherBenefits"]
             )
 
     departments = sorted(headcount_totals)

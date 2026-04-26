@@ -133,7 +133,7 @@ monthly base salary cost = annual salary for financial year / 12 * FTE
 Benefits output uses:
 
 ```text
-monthly benefit cost = monthly benefit assumption for Domestic/International * FTE
+monthly benefit cost = full monthly benefit assumption when employee FTE is above 0
 ```
 
 ## Render Backend
