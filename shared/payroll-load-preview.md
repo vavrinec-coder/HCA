@@ -28,7 +28,8 @@ The add-in sends this shape to `POST /payroll/load-preview`:
   },
   "output": {
     "sheet": "HCA_Output",
-    "headcountStartCell": "E4"
+    "headcountStartCell": "E4",
+    "baseSalaryStartCell": "E17"
   },
   "metrics": {
     "totalRows": 1527,

@@ -4,7 +4,7 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.payroll_headcount import calculate_headcount
+from app.payroll_headcount import calculate_payroll_outputs
 from app.schemas import PayrollLoadPreviewRequest
 
 
@@ -35,7 +35,7 @@ def health() -> dict[str, str]:
 @app.post("/payroll/load-preview")
 def payroll_load_preview(payload: PayrollLoadPreviewRequest) -> dict[str, Any]:
     sample_keys = list(payload.rows[0].keys()) if payload.rows else []
-    headcount = calculate_headcount(payload.headers, payload.rows, payload.model)
+    outputs = calculate_payroll_outputs(payload.headers, payload.rows, payload.model)
 
     return {
         "status": "received",
@@ -57,7 +57,5 @@ def payroll_load_preview(payload: PayrollLoadPreviewRequest) -> dict[str, Any]:
         "receivedRows": len(payload.rows),
         "loadTimeMs": payload.metrics.loadTimeMs,
         "sampleKeys": sample_keys[:10],
-        "outputs": {
-            "headcount": headcount,
-        },
+        "outputs": outputs,
     }

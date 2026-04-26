@@ -11,7 +11,7 @@ START_DATE_FIELD_INDEX = 4
 END_DATE_FIELD_INDEX = 5
 
 
-def calculate_headcount(
+def calculate_payroll_outputs(
     headers: list[str],
     rows: list[dict[str, Any]],
     model: ModelConfig,
@@ -27,7 +27,13 @@ def calculate_headcount(
         }
         for period in model.periods
     ]
-    totals: dict[str, list[float]] = defaultdict(lambda: [0.0] * len(periods))
+    salary_fields = salary_field_by_period(headers, periods)
+    headcount_totals: dict[str, list[float]] = defaultdict(
+        lambda: [0.0] * len(periods)
+    )
+    base_salary_totals: dict[str, list[float]] = defaultdict(
+        lambda: [0.0] * len(periods)
+    )
     skipped_rows = 0
 
     for row in rows:
@@ -44,31 +50,32 @@ def calculate_headcount(
         for index, period in enumerate(periods):
             month_end = period["date"]
             month_start = date(month_end.year, month_end.month, 1)
-            totals[department][index] += monthly_fte(
-                start_date, end_date, month_start, month_end
-            )
+            fte = monthly_fte(start_date, end_date, month_start, month_end)
+            annual_salary = parse_number(row.get(salary_fields[index]))
+            headcount_totals[department][index] += fte
+            base_salary_totals[department][index] += (annual_salary / 12) * fte
 
-    departments = sorted(totals)
-    table = [["Department", *[period["label"] for period in periods]]]
-    for department in departments:
-        table.append([department, *[round(value, 2) for value in totals[department]]])
+    departments = sorted(headcount_totals)
 
     return {
-        "table": table,
-        "departments": departments,
-        "periods": [
-            {
-                "date": period["date"].isoformat(),
-                "label": period["label"],
-                "financialYear": period["financialYear"],
-            }
-            for period in periods
-        ],
-        "skippedRows": skipped_rows,
-        "fieldMap": {
-            "department": department_field,
-            "startDate": start_date_field,
-            "endDate": end_date_field,
+        "headcount": {
+            "table": output_table(departments, periods, headcount_totals, decimals=2),
+            "departments": departments,
+            "periods": serialize_periods(periods),
+            "skippedRows": skipped_rows,
+            "fieldMap": {
+                "department": department_field,
+                "startDate": start_date_field,
+                "endDate": end_date_field,
+            },
+        },
+        "baseSalary": {
+            "table": output_table(
+                departments, periods, base_salary_totals, decimals=0
+            ),
+            "departments": departments,
+            "periods": serialize_periods(periods),
+            "salaryFieldByPeriod": salary_fields,
         },
     }
 
@@ -90,6 +97,45 @@ def monthly_fte(
     return active_days / days_in_month
 
 
+def salary_field_by_period(
+    headers: list[str],
+    periods: list[dict[str, Any]],
+) -> list[str | None]:
+    available_salary_fields = {str(header).strip(): header for header in headers}
+    return [
+        available_salary_fields.get(str(period["financialYear"]))
+        for period in periods
+    ]
+
+
+def output_table(
+    departments: list[str],
+    periods: list[dict[str, Any]],
+    totals: dict[str, list[float]],
+    decimals: int,
+) -> list[list[Any]]:
+    table = [["Department", *[period["label"] for period in periods]]]
+    for department in departments:
+        table.append(
+            [
+                department,
+                *[round(value, decimals) for value in totals[department]],
+            ]
+        )
+    return table
+
+
+def serialize_periods(periods: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "date": period["date"].isoformat(),
+            "label": period["label"],
+            "financialYear": period["financialYear"],
+        }
+        for period in periods
+    ]
+
+
 def field_name(headers: list[str], index: int, fallback: str) -> str:
     if index >= len(headers):
         raise ValueError(f"Payroll data is missing expected field: {fallback}")
@@ -98,6 +144,20 @@ def field_name(headers: list[str], index: int, fallback: str) -> str:
 
 def normalize_text(value: Any) -> str:
     return str(value or "").strip()
+
+
+def parse_number(value: Any) -> float:
+    if value in (None, "", "-"):
+        return 0.0
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    text = str(value).strip().replace(",", "")
+    if not text or text == "-":
+        return 0.0
+
+    return float(text)
 
 
 def parse_date_value(value: Any) -> date | None:

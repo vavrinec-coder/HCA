@@ -190,6 +190,10 @@ function parseConfig(values) {
       settings,
       "payroll.headcount output start cell"
     ),
+    baseSalaryStartCell: requiredSetting(
+      settings,
+      "payroll.base salary output start cell"
+    ),
   };
 
   return {
@@ -381,34 +385,52 @@ async function writePayrollOutputs(outputConfig, outputs) {
   if (!outputs?.headcount?.table?.length) {
     throw new Error("Backend did not return a headcount output table.");
   }
+  if (!outputs?.baseSalary?.table?.length) {
+    throw new Error("Backend did not return a base salary output table.");
+  }
 
   await Excel.run(async (context) => {
     const outputSheet = context.workbook.worksheets.getItem(outputConfig.sheet);
-    const startRange = outputSheet.getRange(outputConfig.headcountStartCell);
-    const targetRange = startRange.getResizedRange(
-      outputs.headcount.table.length - 1,
-      outputs.headcount.table[0].length - 1
+    writeOutputTable(
+      outputSheet,
+      outputConfig.headcountStartCell,
+      outputs.headcount.table,
+      "0.00"
     );
-
-    targetRange.values = outputs.headcount.table;
-    targetRange.numberFormat = buildHeadcountNumberFormat(outputs.headcount.table);
-    targetRange.format.autofitColumns();
+    writeOutputTable(
+      outputSheet,
+      outputConfig.baseSalaryStartCell,
+      outputs.baseSalary.table,
+      "#,##0"
+    );
 
     await context.sync();
   });
 
   addLog(
-    `Headcount output written to ${outputConfig.sheet}!${outputConfig.headcountStartCell}.`
+    `Payroll outputs written to ${outputConfig.sheet}.`
   );
 }
 
-function buildHeadcountNumberFormat(table) {
+function writeOutputTable(outputSheet, startCell, table, numberFormat) {
+  const startRange = outputSheet.getRange(startCell);
+  const targetRange = startRange.getResizedRange(
+    table.length - 1,
+    table[0].length - 1
+  );
+
+  targetRange.values = table;
+  targetRange.numberFormat = buildOutputNumberFormat(table, numberFormat);
+  targetRange.format.autofitColumns();
+}
+
+function buildOutputNumberFormat(table, numberFormat) {
   return table.map((row, rowIndex) =>
     row.map((_, columnIndex) => {
       if (rowIndex === 0 || columnIndex === 0) {
         return "@";
       }
-      return "0.00";
+      return numberFormat;
     })
   );
 }
