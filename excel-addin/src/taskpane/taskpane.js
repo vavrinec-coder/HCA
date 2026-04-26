@@ -190,9 +190,21 @@ function parseConfig(values) {
       settings,
       "payroll.headcount output start cell"
     ),
-    baseSalaryStartCell: requiredSetting(
+    baseSalaryTotalStartCell: requiredSetting(
       settings,
-      "payroll.base salary output start cell"
+      "payroll.base salary total output start cell"
+    ),
+    baseSalaryDomesticStartCell: requiredSetting(
+      settings,
+      "payroll.base salary domestic output start cell"
+    ),
+    baseSalaryInternationalStartCell: requiredSetting(
+      settings,
+      "payroll.base salary international output start cell"
+    ),
+    baseSalaryCogsStartCell: requiredSetting(
+      settings,
+      "payroll.base salary cogs output start cell"
     ),
   };
 
@@ -385,8 +397,8 @@ async function writePayrollOutputs(outputConfig, outputs) {
   if (!outputs?.headcount?.table?.length) {
     throw new Error("Backend did not return a headcount output table.");
   }
-  if (!outputs?.baseSalary?.table?.length) {
-    throw new Error("Backend did not return a base salary output table.");
+  if (!outputs?.baseSalary?.total?.table?.length) {
+    throw new Error("Backend did not return base salary output tables.");
   }
 
   await Excel.run(async (context) => {
@@ -399,8 +411,26 @@ async function writePayrollOutputs(outputConfig, outputs) {
     );
     writeOutputTable(
       outputSheet,
-      outputConfig.baseSalaryStartCell,
-      outputs.baseSalary.table,
+      outputConfig.baseSalaryTotalStartCell,
+      outputs.baseSalary.total.table,
+      "#,##0"
+    );
+    writeOutputTable(
+      outputSheet,
+      outputConfig.baseSalaryDomesticStartCell,
+      outputs.baseSalary.domestic.table,
+      "#,##0"
+    );
+    writeOutputTable(
+      outputSheet,
+      outputConfig.baseSalaryInternationalStartCell,
+      outputs.baseSalary.international.table,
+      "#,##0"
+    );
+    writeOutputTable(
+      outputSheet,
+      outputConfig.baseSalaryCogsStartCell,
+      outputs.baseSalary.cogs.table,
       "#,##0"
     );
 

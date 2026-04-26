@@ -9,6 +9,8 @@ from app.schemas import ModelConfig
 DEPARTMENT_FIELD_INDEX = 3
 START_DATE_FIELD_INDEX = 4
 END_DATE_FIELD_INDEX = 5
+FS_CATEGORY_FIELD_INDEX = 1
+STATUS_FIELD_INDEX = 2
 
 
 def calculate_payroll_outputs(
@@ -19,6 +21,8 @@ def calculate_payroll_outputs(
     department_field = field_name(headers, DEPARTMENT_FIELD_INDEX, "department")
     start_date_field = field_name(headers, START_DATE_FIELD_INDEX, "start date")
     end_date_field = field_name(headers, END_DATE_FIELD_INDEX, "end date")
+    fs_category_field = field_name(headers, FS_CATEGORY_FIELD_INDEX, "FS category")
+    status_field = field_name(headers, STATUS_FIELD_INDEX, "status")
     periods = [
         {
             "date": parse_iso_date(period.date),
@@ -34,6 +38,15 @@ def calculate_payroll_outputs(
     base_salary_totals: dict[str, list[float]] = defaultdict(
         lambda: [0.0] * len(periods)
     )
+    domestic_salary_totals: dict[str, list[float]] = defaultdict(
+        lambda: [0.0] * len(periods)
+    )
+    international_salary_totals: dict[str, list[float]] = defaultdict(
+        lambda: [0.0] * len(periods)
+    )
+    cogs_salary_totals: dict[str, list[float]] = defaultdict(
+        lambda: [0.0] * len(periods)
+    )
     skipped_rows = 0
 
     for row in rows:
@@ -47,15 +60,30 @@ def calculate_payroll_outputs(
             skipped_rows += 1
             continue
 
+        status = normalize_key(row.get(status_field))
+        fs_category = normalize_key(row.get(fs_category_field))
+
         for index, period in enumerate(periods):
             month_end = period["date"]
             month_start = date(month_end.year, month_end.month, 1)
             fte = monthly_fte(start_date, end_date, month_start, month_end)
             annual_salary = parse_number(row.get(salary_fields[index]))
+            monthly_salary = (annual_salary / 12) * fte
             headcount_totals[department][index] += fte
-            base_salary_totals[department][index] += (annual_salary / 12) * fte
+            base_salary_totals[department][index] += monthly_salary
+
+            if status == "domestic":
+                domestic_salary_totals[department][index] += monthly_salary
+            elif status == "international":
+                international_salary_totals[department][index] += monthly_salary
+
+            if fs_category == "cos":
+                cogs_salary_totals[department][index] += monthly_salary
 
     departments = sorted(headcount_totals)
+    domestic_departments = sorted(domestic_salary_totals)
+    international_departments = sorted(international_salary_totals)
+    cogs_departments = sorted(cogs_salary_totals)
 
     return {
         "headcount": {
@@ -70,10 +98,36 @@ def calculate_payroll_outputs(
             },
         },
         "baseSalary": {
-            "table": output_table(
-                departments, periods, base_salary_totals, decimals=0
-            ),
-            "departments": departments,
+            "total": {
+                "table": output_table(
+                    departments, periods, base_salary_totals, decimals=0
+                ),
+                "departments": departments,
+            },
+            "domestic": {
+                "table": output_table(
+                    domestic_departments,
+                    periods,
+                    domestic_salary_totals,
+                    decimals=0,
+                ),
+                "departments": domestic_departments,
+            },
+            "international": {
+                "table": output_table(
+                    international_departments,
+                    periods,
+                    international_salary_totals,
+                    decimals=0,
+                ),
+                "departments": international_departments,
+            },
+            "cogs": {
+                "table": output_table(
+                    cogs_departments, periods, cogs_salary_totals, decimals=0
+                ),
+                "departments": cogs_departments,
+            },
             "periods": serialize_periods(periods),
             "salaryFieldByPeriod": salary_fields,
         },
@@ -144,6 +198,10 @@ def field_name(headers: list[str], index: int, fallback: str) -> str:
 
 def normalize_text(value: Any) -> str:
     return str(value or "").strip()
+
+
+def normalize_key(value: Any) -> str:
+    return normalize_text(value).lower()
 
 
 def parse_number(value: Any) -> float:

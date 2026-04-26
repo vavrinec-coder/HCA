@@ -103,7 +103,10 @@ Payroll   Headers                  B4:R4
 Payroll   Filter column            R
 Payroll   Output sheet             HCA_Output
 Payroll   Headcount output start cell E4
-Payroll   Base salary output start cell E17
+Payroll   Base salary total output start cell E17
+Payroll   Base salary domestic output start cell E30
+Payroll   Base salary international output start cell E44
+Payroll   Base salary COGS output start cell E57
 ```
 
 Headcount/FTE output is written as a table starting at the configured start cell:
