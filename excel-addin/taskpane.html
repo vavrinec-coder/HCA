@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>External Calc Engine</title>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <script type="module" src="/src/taskpane/taskpane.js"></script>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="app-header">
+        <div>
+          <h1>Model Control Center</h1>
+          <p>Payroll Module</p>
+        </div>
+        <span class="header-icon" aria-hidden="true">x</span>
+      </header>
+
+      <section class="cloud-bar" aria-label="Backend connection">
+        <div>
+          <span id="cloud-dot" class="cloud-dot"></span>
+          <strong>Railway Cloud</strong>
+        </div>
+        <span id="backend-state" class="state-pill">Checking</span>
+      </section>
+
+      <section class="panel" aria-labelledby="payroll-title">
+        <div class="section-heading">
+          <h2 id="payroll-title">Payroll</h2>
+          <span aria-hidden="true">^</span>
+        </div>
+
+        <button id="payroll-recalc" class="primary-button" type="button">
+          Payroll Recalc
+        </button>
+
+        <div id="status" class="status" role="status">Ready.</div>
+
+        <dl class="diagnostics" aria-label="Payroll load diagnostics">
+          <div>
+            <dt>Config detected</dt>
+            <dd id="config-state">Pending</dd>
+          </div>
+          <div>
+            <dt>Data source sheet</dt>
+            <dd id="data-sheet">-</dd>
+          </div>
+          <div>
+            <dt>Data range</dt>
+            <dd id="data-range">-</dd>
+          </div>
+          <div>
+            <dt>Filter</dt>
+            <dd id="filter-rule">-</dd>
+          </div>
+          <div>
+            <dt>Included rows</dt>
+            <dd id="included-rows">-</dd>
+          </div>
+          <div>
+            <dt>Load speed / elapsed</dt>
+            <dd id="load-speed">-</dd>
+          </div>
+          <div>
+            <dt>Backend status</dt>
+            <dd id="backend-result">-</dd>
+          </div>
+        </dl>
+
+        <div class="summary">
+          <label for="backend-url">Backend URL</label>
+          <input id="backend-url" type="url" spellcheck="false" />
+        </div>
+
+        <section class="activity-card" aria-labelledby="activity-title">
+          <div class="activity-heading">
+            <h2 id="activity-title">Activity Log</h2>
+            <button id="clear-log" class="text-button" type="button">Clear</button>
+          </div>
+          <ol id="activity-log" class="activity-log"></ol>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>
