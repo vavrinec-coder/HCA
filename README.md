@@ -101,6 +101,14 @@ Payroll   Data load Sheet          PayrollData
 Payroll   Cell range               B5:R1531
 Payroll   Headers                  B4:R4
 Payroll   Filter column            R
+Payroll   Output sheet             HCA_Output
+Payroll   Headcount output start cell E4
+```
+
+Headcount/FTE output is written as a table starting at the configured start cell:
+
+```text
+Department | Apr 2026 | May 2026 | ...
 ```
 
 ## Render Backend

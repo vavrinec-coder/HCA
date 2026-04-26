@@ -3,45 +3,9 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
 
-
-class PayrollSource(BaseModel):
-    sheet: str
-    headerRange: str
-    dataRange: str
-    filterColumn: str
-
-
-class PayrollMetrics(BaseModel):
-    totalRows: int = Field(ge=0)
-    includedRows: int = Field(ge=0)
-    loadTimeMs: float = Field(ge=0)
-
-
-class ModelPeriod(BaseModel):
-    date: str
-    label: str
-    financialYear: int
-
-
-class ModelConfig(BaseModel):
-    lastActualsDate: str
-    modelEndDate: str
-    calculationStartDate: str
-    calculationEndDate: str
-    calculationMonths: int = Field(ge=1)
-    financialYearEndMonth: int = Field(ge=1, le=12)
-    periods: list[ModelPeriod]
-
-
-class PayrollLoadPreviewRequest(BaseModel):
-    section: str
-    model: ModelConfig
-    source: PayrollSource
-    metrics: PayrollMetrics
-    headers: list[str]
-    rows: list[dict[str, Any]]
+from app.payroll_headcount import calculate_headcount
+from app.schemas import PayrollLoadPreviewRequest
 
 
 def _cors_origins() -> list[str]:
@@ -71,6 +35,7 @@ def health() -> dict[str, str]:
 @app.post("/payroll/load-preview")
 def payroll_load_preview(payload: PayrollLoadPreviewRequest) -> dict[str, Any]:
     sample_keys = list(payload.rows[0].keys()) if payload.rows else []
+    headcount = calculate_headcount(payload.headers, payload.rows, payload.model)
 
     return {
         "status": "received",
@@ -92,4 +57,7 @@ def payroll_load_preview(payload: PayrollLoadPreviewRequest) -> dict[str, Any]:
         "receivedRows": len(payload.rows),
         "loadTimeMs": payload.metrics.loadTimeMs,
         "sampleKeys": sample_keys[:10],
+        "outputs": {
+            "headcount": headcount,
+        },
     }

@@ -26,6 +26,10 @@ The add-in sends this shape to `POST /payroll/load-preview`:
     "dataRange": "B5:R1531",
     "filterColumn": "R"
   },
+  "output": {
+    "sheet": "HCA_Output",
+    "headcountStartCell": "E4"
+  },
   "metrics": {
     "totalRows": 1527,
     "includedRows": 123,

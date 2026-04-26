@@ -62,12 +62,13 @@ async function handlePayrollRecalc() {
     setStatus("Workbook load complete. Sending preview to backend...");
 
     const backendSummary = await sendLoadPreview(payload);
+    await writePayrollOutputs(payload.output, backendSummary.outputs);
     setBackendUi("Success", "connected");
     elements.backendResult.textContent = backendSummary.status || "Success";
     elements.backendResult.className = "is-success";
-    setStatus("Payroll load preview complete.", "success");
+    setStatus("Payroll headcount output complete.", "success");
     addLog(
-      `Payroll preview completed. ${payload.metrics.includedRows.toLocaleString()} rows included.`
+      `Payroll headcount completed. ${payload.metrics.includedRows.toLocaleString()} rows included.`
     );
   } catch (error) {
     setBackendUi("Error", "error");
@@ -119,6 +120,7 @@ async function buildPayrollPayload(startedAt) {
         dataRange: config.payroll.cellRange,
         filterColumn: config.payroll.filterColumn,
       },
+      output: config.output,
       metrics: {
         totalRows: rows.length,
         includedRows: included.length,
@@ -182,6 +184,13 @@ function parseConfig(values) {
     headers: requiredSetting(settings, "payroll.headers"),
     filterColumn: requiredSetting(settings, "payroll.filter column"),
   };
+  const output = {
+    sheet: requiredSetting(settings, "payroll.output sheet"),
+    headcountStartCell: requiredSetting(
+      settings,
+      "payroll.headcount output start cell"
+    ),
+  };
 
   return {
     model: {
@@ -194,6 +203,7 @@ function parseConfig(values) {
       periods: timeline.periods,
     },
     payroll,
+    output,
   };
 }
 
@@ -365,6 +375,42 @@ async function sendLoadPreview(payload) {
   }
 
   return response.json();
+}
+
+async function writePayrollOutputs(outputConfig, outputs) {
+  if (!outputs?.headcount?.table?.length) {
+    throw new Error("Backend did not return a headcount output table.");
+  }
+
+  await Excel.run(async (context) => {
+    const outputSheet = context.workbook.worksheets.getItem(outputConfig.sheet);
+    const startRange = outputSheet.getRange(outputConfig.headcountStartCell);
+    const targetRange = startRange.getResizedRange(
+      outputs.headcount.table.length - 1,
+      outputs.headcount.table[0].length - 1
+    );
+
+    targetRange.values = outputs.headcount.table;
+    targetRange.numberFormat = buildHeadcountNumberFormat(outputs.headcount.table);
+    targetRange.format.autofitColumns();
+
+    await context.sync();
+  });
+
+  addLog(
+    `Headcount output written to ${outputConfig.sheet}!${outputConfig.headcountStartCell}.`
+  );
+}
+
+function buildHeadcountNumberFormat(table) {
+  return table.map((row, rowIndex) =>
+    row.map((_, columnIndex) => {
+      if (rowIndex === 0 || columnIndex === 0) {
+        return "@";
+      }
+      return "0.00";
+    })
+  );
 }
 
 function updateMetrics(metrics) {
