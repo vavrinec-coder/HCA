@@ -80,20 +80,20 @@ For the current workbook, the `Payroll` config is expected to point to:
 - Data range: `B5:S1531`
 - Filter column: `S`
 
-## Railway Backend
+## Render Backend
 
-The backend is ready for Railway deployment from the `calc-engine/` folder. Railway will use the included `Dockerfile`.
+The backend is ready for Render deployment from the repo root using `render.yaml`.
 
-Required environment variable after deployment:
-
-```text
-CORS_ORIGINS=https://your-github-username.github.io
-```
-
-For early testing only, you can temporarily use:
+The first MVP uses this temporary environment variable:
 
 ```text
 CORS_ORIGINS=*
+```
+
+After the add-in is hosted at a stable URL, restrict it to that origin:
+
+```text
+CORS_ORIGINS=https://your-github-username.github.io
 ```
 
 This MVP has no authentication. Do not treat the preview endpoint as production-secure.
