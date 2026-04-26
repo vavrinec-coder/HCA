@@ -5,10 +5,10 @@
            xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
            xsi:type="TaskPaneApp">
   <Id>e4a9a4fd-7844-4daa-8df6-2bf4a87fb7be</Id>
-  <Version>1.0.0.0</Version>
+  <Version>1.0.1.0</Version>
   <ProviderName>XF1 Advisory</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="External Calc Engine"/>
+  <DisplayName DefaultValue="Heavy Calc Assist"/>
   <Description DefaultValue="Loads Payroll input rows from Excel and sends a preview to the calc engine."/>
   <IconUrl DefaultValue="https://localhost:3000/assets/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://localhost:3000/assets/icon-64.png"/>
@@ -77,7 +77,7 @@
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://localhost:3000/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="GetStarted.Title" DefaultValue="External Calc Engine"/>
+        <bt:String id="GetStarted.Title" DefaultValue="Heavy Calc Assist"/>
         <bt:String id="PayrollGroup.Label" DefaultValue="External Calc"/>
         <bt:String id="OpenPayrollPane.Label" DefaultValue="Payroll"/>
       </bt:ShortStrings>
