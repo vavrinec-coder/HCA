@@ -103,3 +103,25 @@ CORS_ORIGINS=https://your-github-username.github.io
 ```
 
 This MVP has no authentication. Do not treat the preview endpoint as production-secure.
+
+## Microsoft 365 Admin Center Deployment
+
+The production add-in is intended to be hosted on GitHub Pages:
+
+```text
+https://vavrinec-coder.github.io/HCA/taskpane.html
+```
+
+Upload this manifest in Microsoft 365 Admin Center:
+
+```text
+deploy/m365/hca-production-manifest.xml
+```
+
+Recommended first rollout:
+
+1. Deploy to `Just me` first.
+2. Test in Windows Desktop Excel.
+3. Then assign to a small pilot group.
+
+Microsoft notes that users might need to relaunch Office, and deployed add-ins can take time to appear on the ribbon.
