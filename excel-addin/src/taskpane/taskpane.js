@@ -121,6 +121,7 @@ async function buildPayrollPayload(startedAt) {
         filterColumn: config.payroll.filterColumn,
       },
       output: config.output,
+      assumptions: config.assumptions,
       metrics: {
         totalRows: rows.length,
         includedRows: included.length,
@@ -206,6 +207,52 @@ function parseConfig(values) {
       settings,
       "payroll.base salary cogs output start cell"
     ),
+    medicalStartCell: requiredSetting(
+      settings,
+      "payroll.medical output start cell"
+    ),
+    retirement401kStartCell: requiredSetting(
+      settings,
+      "payroll.401k output start cell"
+    ),
+    otherBenefitsStartCell: requiredSetting(
+      settings,
+      "payroll.other benefits output start cell"
+    ),
+  };
+  const assumptions = {
+    benefits: {
+      medical: {
+        domestic: parseNumberSetting(
+          requiredSetting(settings, "payroll.medical - domestic"),
+          "Medical - Domestic"
+        ),
+        international: parseNumberSetting(
+          requiredSetting(settings, "payroll.medical - international"),
+          "Medical - International"
+        ),
+      },
+      retirement401k: {
+        domestic: parseNumberSetting(
+          requiredSetting(settings, "payroll.401k - domestic"),
+          "401k - Domestic"
+        ),
+        international: parseNumberSetting(
+          requiredSetting(settings, "payroll.401k - international"),
+          "401k - International"
+        ),
+      },
+      otherBenefits: {
+        domestic: parseNumberSetting(
+          requiredSetting(settings, "payroll.other benefits - domestic"),
+          "Other Benefits - Domestic"
+        ),
+        international: parseNumberSetting(
+          requiredSetting(settings, "payroll.other benefits - international"),
+          "Other Benefits - International"
+        ),
+      },
+    },
   };
 
   return {
@@ -220,6 +267,7 @@ function parseConfig(values) {
     },
     payroll,
     output,
+    assumptions,
   };
 }
 
@@ -316,6 +364,19 @@ function parseMonthNumber(value, label) {
     throw new Error(`${label} must be a number from 1 to 12.`);
   }
   return month;
+}
+
+function parseNumberSetting(value, label) {
+  if (typeof value === "number") {
+    return value;
+  }
+
+  const parsed = Number(String(value).replace(/,/g, "").trim());
+  if (Number.isNaN(parsed)) {
+    throw new Error(`${label} must be a number.`);
+  }
+
+  return parsed;
 }
 
 function buildModelTimeline(lastActualsDate, modelEndDate, financialYearEndMonth) {
@@ -431,6 +492,24 @@ async function writePayrollOutputs(outputConfig, outputs) {
       outputSheet,
       outputConfig.baseSalaryCogsStartCell,
       outputs.baseSalary.cogs.table,
+      "#,##0"
+    );
+    writeOutputTable(
+      outputSheet,
+      outputConfig.medicalStartCell,
+      outputs.benefits.medical.table,
+      "#,##0"
+    );
+    writeOutputTable(
+      outputSheet,
+      outputConfig.retirement401kStartCell,
+      outputs.benefits.retirement401k.table,
+      "#,##0"
+    );
+    writeOutputTable(
+      outputSheet,
+      outputConfig.otherBenefitsStartCell,
+      outputs.benefits.otherBenefits.table,
       "#,##0"
     );
 

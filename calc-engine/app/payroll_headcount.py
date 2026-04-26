@@ -17,6 +17,7 @@ def calculate_payroll_outputs(
     headers: list[str],
     rows: list[dict[str, Any]],
     model: ModelConfig,
+    assumptions: dict[str, Any],
 ) -> dict[str, Any]:
     department_field = field_name(headers, DEPARTMENT_FIELD_INDEX, "department")
     start_date_field = field_name(headers, START_DATE_FIELD_INDEX, "start date")
@@ -45,6 +46,14 @@ def calculate_payroll_outputs(
         lambda: [0.0] * len(periods)
     )
     cogs_salary_totals: dict[str, list[float]] = defaultdict(
+        lambda: [0.0] * len(periods)
+    )
+    benefit_rates = parse_benefit_rates(assumptions)
+    medical_totals: dict[str, list[float]] = defaultdict(lambda: [0.0] * len(periods))
+    retirement_401k_totals: dict[str, list[float]] = defaultdict(
+        lambda: [0.0] * len(periods)
+    )
+    other_benefits_totals: dict[str, list[float]] = defaultdict(
         lambda: [0.0] * len(periods)
     )
     skipped_rows = 0
@@ -80,10 +89,22 @@ def calculate_payroll_outputs(
             if fs_category == "cos":
                 cogs_salary_totals[department][index] += monthly_salary
 
+            status_rates = benefit_rates.get(status, ZERO_BENEFIT_RATES)
+            medical_totals[department][index] += fte * status_rates["medical"]
+            retirement_401k_totals[department][index] += (
+                fte * status_rates["retirement401k"]
+            )
+            other_benefits_totals[department][index] += (
+                fte * status_rates["otherBenefits"]
+            )
+
     departments = sorted(headcount_totals)
     domestic_departments = sorted(domestic_salary_totals)
     international_departments = sorted(international_salary_totals)
     cogs_departments = sorted(cogs_salary_totals)
+    medical_departments = sorted(medical_totals)
+    retirement_401k_departments = sorted(retirement_401k_totals)
+    other_benefits_departments = sorted(other_benefits_totals)
 
     return {
         "headcount": {
@@ -130,6 +151,33 @@ def calculate_payroll_outputs(
             },
             "periods": serialize_periods(periods),
             "salaryFieldByPeriod": salary_fields,
+        },
+        "benefits": {
+            "medical": {
+                "table": output_table(
+                    medical_departments, periods, medical_totals, decimals=0
+                ),
+                "departments": medical_departments,
+            },
+            "retirement401k": {
+                "table": output_table(
+                    retirement_401k_departments,
+                    periods,
+                    retirement_401k_totals,
+                    decimals=0,
+                ),
+                "departments": retirement_401k_departments,
+            },
+            "otherBenefits": {
+                "table": output_table(
+                    other_benefits_departments,
+                    periods,
+                    other_benefits_totals,
+                    decimals=0,
+                ),
+                "departments": other_benefits_departments,
+            },
+            "periods": serialize_periods(periods),
         },
     }
 
@@ -216,6 +264,38 @@ def parse_number(value: Any) -> float:
         return 0.0
 
     return float(text)
+
+
+ZERO_BENEFIT_RATES = {
+    "medical": 0.0,
+    "retirement401k": 0.0,
+    "otherBenefits": 0.0,
+}
+
+
+def parse_benefit_rates(assumptions: dict[str, Any]) -> dict[str, dict[str, float]]:
+    benefits = assumptions.get("benefits", {})
+
+    return {
+        "domestic": {
+            "medical": parse_number(benefits.get("medical", {}).get("domestic")),
+            "retirement401k": parse_number(
+                benefits.get("retirement401k", {}).get("domestic")
+            ),
+            "otherBenefits": parse_number(
+                benefits.get("otherBenefits", {}).get("domestic")
+            ),
+        },
+        "international": {
+            "medical": parse_number(benefits.get("medical", {}).get("international")),
+            "retirement401k": parse_number(
+                benefits.get("retirement401k", {}).get("international")
+            ),
+            "otherBenefits": parse_number(
+                benefits.get("otherBenefits", {}).get("international")
+            ),
+        },
+    }
 
 
 def parse_date_value(value: Any) -> date | None:

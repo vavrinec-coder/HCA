@@ -107,6 +107,15 @@ Payroll   Base salary total output start cell E17
 Payroll   Base salary domestic output start cell E30
 Payroll   Base salary international output start cell E44
 Payroll   Base salary COGS output start cell E57
+Payroll   Medical - Domestic       2464
+Payroll   Medical - International  2162
+Payroll   401k - Domestic          432
+Payroll   401k - International     501
+Payroll   Other Benefits - Domestic 157
+Payroll   Other Benefits - International 20
+Payroll   Medical output start cell E70
+Payroll   401k output start cell E83
+Payroll   Other Benefits output start cell E96
 ```
 
 Headcount/FTE output is written as a table starting at the configured start cell:
@@ -119,6 +128,12 @@ Base salary output uses:
 
 ```text
 monthly base salary cost = annual salary for financial year / 12 * FTE
+```
+
+Benefits output uses:
+
+```text
+monthly benefit cost = monthly benefit assumption for Domestic/International * FTE
 ```
 
 ## Render Backend

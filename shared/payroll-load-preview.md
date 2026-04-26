@@ -32,7 +32,26 @@ The add-in sends this shape to `POST /payroll/load-preview`:
     "baseSalaryTotalStartCell": "E17",
     "baseSalaryDomesticStartCell": "E30",
     "baseSalaryInternationalStartCell": "E44",
-    "baseSalaryCogsStartCell": "E57"
+    "baseSalaryCogsStartCell": "E57",
+    "medicalStartCell": "E70",
+    "retirement401kStartCell": "E83",
+    "otherBenefitsStartCell": "E96"
+  },
+  "assumptions": {
+    "benefits": {
+      "medical": {
+        "domestic": 2464,
+        "international": 2162
+      },
+      "retirement401k": {
+        "domestic": 432,
+        "international": 501
+      },
+      "otherBenefits": {
+        "domestic": 157,
+        "international": 20
+      }
+    }
   },
   "metrics": {
     "totalRows": 1527,

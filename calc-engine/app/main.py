@@ -35,7 +35,9 @@ def health() -> dict[str, str]:
 @app.post("/payroll/load-preview")
 def payroll_load_preview(payload: PayrollLoadPreviewRequest) -> dict[str, Any]:
     sample_keys = list(payload.rows[0].keys()) if payload.rows else []
-    outputs = calculate_payroll_outputs(payload.headers, payload.rows, payload.model)
+    outputs = calculate_payroll_outputs(
+        payload.headers, payload.rows, payload.model, payload.assumptions
+    )
 
     return {
         "status": "received",

@@ -36,6 +36,7 @@ class PayrollLoadPreviewRequest(BaseModel):
     section: str
     model: ModelConfig
     source: PayrollSource
+    assumptions: dict[str, Any]
     metrics: PayrollMetrics
     headers: list[str]
     rows: list[dict[str, Any]]
