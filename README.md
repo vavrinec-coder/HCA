@@ -27,6 +27,12 @@ Check:
 Invoke-RestMethod https://localhost:8000/health
 ```
 
+Hosted backend:
+
+```text
+https://hca-calc-engine.onrender.com
+```
+
 ## Local Excel Add-in
 
 From `excel-addin/`:

@@ -1,7 +1,7 @@
 import "./taskpane.css";
 
 const DEFAULT_BACKEND_URL =
-  import.meta.env.VITE_BACKEND_URL || "https://localhost:8000";
+  import.meta.env.VITE_BACKEND_URL || "https://hca-calc-engine.onrender.com";
 
 const elements = {
   button: document.querySelector("#payroll-recalc"),

@@ -16,6 +16,7 @@
   <AppDomains>
     <AppDomain>https://localhost:3000</AppDomain>
     <AppDomain>https://localhost:8000</AppDomain>
+    <AppDomain>https://hca-calc-engine.onrender.com</AppDomain>
   </AppDomains>
   <Hosts>
     <Host Name="Workbook"/>
