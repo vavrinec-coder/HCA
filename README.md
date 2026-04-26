@@ -71,20 +71,37 @@ For Windows Desktop Excel, the simple local sideload path is:
 The workbook must contain:
 
 - A `Config` sheet.
-- A row where `Section` equals `Payroll`.
 - Config columns named:
   - `Section`
-  - `Data load Sheet`
-  - `Load cell range`
-  - `Column Header`
-  - `Load Filter column`
+  - `Setting`
+  - `Value`
 
-For the current workbook, the `Payroll` config is expected to point to:
+Required `Model` settings:
+
+- `Last actuals date`
+- `Model end date`
+- `Financial year end month`
+
+Required `Payroll` settings:
 
 - Data sheet: `PayrollData`
-- Header range: `B4:S4`
-- Data range: `B5:S1531`
-- Filter column: `S`
+- `Data load Sheet`
+- `Cell range`
+- `Headers`
+- `Filter column`
+
+Example:
+
+```text
+Section   Setting                  Value
+Model     Last actuals date        31-Mar-26
+Model     Model end date           30-Apr-28
+Model     Financial year end month 4
+Payroll   Data load Sheet          PayrollData
+Payroll   Cell range               B5:R1531
+Payroll   Headers                  B4:R4
+Payroll   Filter column            R
+```
 
 ## Render Backend
 

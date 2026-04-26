@@ -19,8 +19,25 @@ class PayrollMetrics(BaseModel):
     loadTimeMs: float = Field(ge=0)
 
 
+class ModelPeriod(BaseModel):
+    date: str
+    label: str
+    financialYear: int
+
+
+class ModelConfig(BaseModel):
+    lastActualsDate: str
+    modelEndDate: str
+    calculationStartDate: str
+    calculationEndDate: str
+    calculationMonths: int = Field(ge=1)
+    financialYearEndMonth: int = Field(ge=1, le=12)
+    periods: list[ModelPeriod]
+
+
 class PayrollLoadPreviewRequest(BaseModel):
     section: str
+    model: ModelConfig
     source: PayrollSource
     metrics: PayrollMetrics
     headers: list[str]
@@ -58,6 +75,16 @@ def payroll_load_preview(payload: PayrollLoadPreviewRequest) -> dict[str, Any]:
     return {
         "status": "received",
         "section": payload.section,
+        "model": {
+            "lastActualsDate": payload.model.lastActualsDate,
+            "modelEndDate": payload.model.modelEndDate,
+            "calculationStartDate": payload.model.calculationStartDate,
+            "calculationEndDate": payload.model.calculationEndDate,
+            "calculationMonths": payload.model.calculationMonths,
+            "financialYearEndMonth": payload.model.financialYearEndMonth,
+            "firstPeriod": payload.model.periods[0].model_dump() if payload.model.periods else None,
+            "lastPeriod": payload.model.periods[-1].model_dump() if payload.model.periods else None,
+        },
         "source": payload.source.model_dump(),
         "totalRows": payload.metrics.totalRows,
         "includedRows": payload.metrics.includedRows,

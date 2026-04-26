@@ -5,11 +5,26 @@ The add-in sends this shape to `POST /payroll/load-preview`:
 ```json
 {
   "section": "Payroll",
+  "model": {
+    "lastActualsDate": "2026-03-31",
+    "modelEndDate": "2028-04-30",
+    "calculationStartDate": "2026-04-30",
+    "calculationEndDate": "2028-04-30",
+    "calculationMonths": 25,
+    "financialYearEndMonth": 4,
+    "periods": [
+      {
+        "date": "2026-04-30",
+        "label": "Apr 2026",
+        "financialYear": 2026
+      }
+    ]
+  },
   "source": {
     "sheet": "PayrollData",
-    "headerRange": "B4:S4",
-    "dataRange": "B5:S1531",
-    "filterColumn": "S"
+    "headerRange": "B4:R4",
+    "dataRange": "B5:R1531",
+    "filterColumn": "R"
   },
   "metrics": {
     "totalRows": 1527,

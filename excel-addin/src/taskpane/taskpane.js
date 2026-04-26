@@ -11,6 +11,8 @@ const elements = {
   dataSheet: document.querySelector("#data-sheet"),
   dataRange: document.querySelector("#data-range"),
   filterRule: document.querySelector("#filter-rule"),
+  forecastPeriod: document.querySelector("#forecast-period"),
+  calculationMonths: document.querySelector("#calculation-months"),
   includedRows: document.querySelector("#included-rows"),
   loadSpeed: document.querySelector("#load-speed"),
   backendResult: document.querySelector("#backend-result"),
@@ -55,7 +57,7 @@ async function handlePayrollRecalc() {
 
   try {
     const payload = await buildPayrollPayload(startedAt);
-    updateConfigUi(payload.source);
+    updateConfigUi(payload.source, payload.model);
     updateMetrics(payload.metrics);
     setStatus("Workbook load complete. Sending preview to backend...");
 
@@ -86,10 +88,10 @@ async function buildPayrollPayload(startedAt) {
 
     await context.sync();
 
-    const config = findPayrollConfig(configRange.values);
-    const dataSheet = context.workbook.worksheets.getItem(config.dataLoadSheet);
-    const headerRange = dataSheet.getRange(config.columnHeader);
-    const dataRange = dataSheet.getRange(config.loadCellRange);
+    const config = parseConfig(configRange.values);
+    const dataSheet = context.workbook.worksheets.getItem(config.payroll.dataLoadSheet);
+    const headerRange = dataSheet.getRange(config.payroll.headers);
+    const dataRange = dataSheet.getRange(config.payroll.cellRange);
 
     headerRange.load("values");
     dataRange.load("values");
@@ -98,7 +100,10 @@ async function buildPayrollPayload(startedAt) {
 
     const headers = normalizeHeaders(headerRange.values[0] || []);
     const rows = dataRange.values || [];
-    const filterOffset = getFilterOffset(config.loadCellRange, config.loadFilterColumn);
+    const filterOffset = getFilterOffset(
+      config.payroll.cellRange,
+      config.payroll.filterColumn
+    );
     const included = rows
       .filter((row) => isIncluded(row[filterOffset]))
       .map((row) => rowToObject(headers, row));
@@ -107,11 +112,12 @@ async function buildPayrollPayload(startedAt) {
 
     return {
       section: "Payroll",
+      model: config.model,
       source: {
-        sheet: config.dataLoadSheet,
-        headerRange: config.columnHeader,
-        dataRange: config.loadCellRange,
-        filterColumn: config.loadFilterColumn,
+        sheet: config.payroll.dataLoadSheet,
+        headerRange: config.payroll.headers,
+        dataRange: config.payroll.cellRange,
+        filterColumn: config.payroll.filterColumn,
       },
       metrics: {
         totalRows: rows.length,
@@ -124,18 +130,16 @@ async function buildPayrollPayload(startedAt) {
   });
 }
 
-function findPayrollConfig(values) {
+function parseConfig(values) {
   if (!values || values.length < 2) {
-    throw new Error("Config sheet does not contain the expected header and Payroll row.");
+    throw new Error("Config sheet does not contain the expected config table.");
   }
 
   const headerRow = values[0].map((value) => normalizeKey(value));
   const columns = {
     section: headerRow.indexOf("section"),
-    dataLoadSheet: headerRow.indexOf("data load sheet"),
-    loadCellRange: headerRow.indexOf("load cell range"),
-    columnHeader: headerRow.indexOf("column header"),
-    loadFilterColumn: headerRow.indexOf("load filter column"),
+    setting: headerRow.indexOf("setting"),
+    value: headerRow.indexOf("value"),
   };
 
   for (const [name, index] of Object.entries(columns)) {
@@ -144,19 +148,52 @@ function findPayrollConfig(values) {
     }
   }
 
-  const payrollRow = values
-    .slice(1)
-    .find((row) => normalizeKey(row[columns.section]) === "payroll");
+  const settings = {};
+  values.slice(1).forEach((row) => {
+    const section = normalizeKey(row[columns.section]);
+    const setting = normalizeKey(row[columns.setting]);
+    if (!section || !setting) {
+      return;
+    }
+    settings[`${section}.${setting}`] = row[columns.value];
+  });
 
-  if (!payrollRow) {
-    throw new Error("Config sheet does not contain a Payroll section row.");
-  }
+  const lastActualsDate = parseExcelDate(
+    requiredSetting(settings, "model.last actuals date"),
+    "Last actuals date"
+  );
+  const modelEndDate = parseExcelDate(
+    requiredSetting(settings, "model.model end date"),
+    "Model end date"
+  );
+  const financialYearEndMonth = parseMonthNumber(
+    requiredSetting(settings, "model.financial year end month"),
+    "Financial year end month"
+  );
+  const timeline = buildModelTimeline(
+    lastActualsDate,
+    modelEndDate,
+    financialYearEndMonth
+  );
+
+  const payroll = {
+    dataLoadSheet: requiredSetting(settings, "payroll.data load sheet"),
+    cellRange: requiredSetting(settings, "payroll.cell range"),
+    headers: requiredSetting(settings, "payroll.headers"),
+    filterColumn: requiredSetting(settings, "payroll.filter column"),
+  };
 
   return {
-    dataLoadSheet: requiredValue(payrollRow[columns.dataLoadSheet], "Data load Sheet"),
-    loadCellRange: requiredValue(payrollRow[columns.loadCellRange], "Load cell range"),
-    columnHeader: requiredValue(payrollRow[columns.columnHeader], "Column Header"),
-    loadFilterColumn: requiredValue(payrollRow[columns.loadFilterColumn], "Load Filter column"),
+    model: {
+      lastActualsDate: formatIsoDate(lastActualsDate),
+      modelEndDate: formatIsoDate(modelEndDate),
+      calculationStartDate: timeline.calculationStartDate,
+      calculationEndDate: timeline.calculationEndDate,
+      calculationMonths: timeline.periods.length,
+      financialYearEndMonth,
+      periods: timeline.periods,
+    },
+    payroll,
   };
 }
 
@@ -216,16 +253,97 @@ function columnToNumber(columnLetters) {
     .reduce((total, letter) => total * 26 + letter.charCodeAt(0) - 64, 0);
 }
 
-function requiredValue(value, label) {
-  const text = String(value ?? "").trim();
-  if (!text) {
-    throw new Error(`Config value is blank: ${label}`);
+function requiredSetting(settings, key) {
+  const value = settings[key];
+  if (value === undefined || value === null || String(value).trim() === "") {
+    throw new Error(`Config value is blank or missing: ${key}`);
   }
-  return text;
+  return value;
 }
 
 function normalizeKey(value) {
   return String(value ?? "").trim().toLowerCase();
+}
+
+function parseExcelDate(value, label) {
+  if (typeof value === "number") {
+    return new Date(Date.UTC(1899, 11, 30 + value));
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return new Date(Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()));
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`Config date is invalid: ${label}`);
+  }
+
+  return new Date(
+    Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate())
+  );
+}
+
+function parseMonthNumber(value, label) {
+  const month = Number(value);
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    throw new Error(`${label} must be a number from 1 to 12.`);
+  }
+  return month;
+}
+
+function buildModelTimeline(lastActualsDate, modelEndDate, financialYearEndMonth) {
+  const startDate = endOfMonth(addMonths(lastActualsDate, 1));
+  const endDate = endOfMonth(modelEndDate);
+
+  if (startDate > endDate) {
+    throw new Error("Model end date must be after Last actuals date.");
+  }
+
+  const periods = [];
+  for (
+    let cursor = startDate;
+    cursor <= endDate;
+    cursor = endOfMonth(addMonths(cursor, 1))
+  ) {
+    periods.push({
+      date: formatIsoDate(cursor),
+      label: formatMonthLabel(cursor),
+      financialYear: getFinancialYear(cursor, financialYearEndMonth),
+    });
+  }
+
+  return {
+    calculationStartDate: formatIsoDate(startDate),
+    calculationEndDate: formatIsoDate(endDate),
+    periods,
+  };
+}
+
+function addMonths(date, months) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1));
+}
+
+function endOfMonth(date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0));
+}
+
+function getFinancialYear(date, financialYearEndMonth) {
+  const month = date.getUTCMonth() + 1;
+  const year = date.getUTCFullYear();
+  return month <= financialYearEndMonth ? year : year + 1;
+}
+
+function formatIsoDate(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function formatMonthLabel(date) {
+  return date.toLocaleString("en-US", {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 async function sendLoadPreview(payload) {
@@ -263,12 +381,16 @@ function updateMetrics(metrics) {
   ).toFixed(2)}s`;
 }
 
-function updateConfigUi(source) {
+function updateConfigUi(source, model) {
   elements.configState.textContent = "Config";
   elements.configState.className = "is-success";
   elements.dataSheet.textContent = source.sheet;
   elements.dataRange.textContent = source.dataRange;
   elements.filterRule.textContent = `${source.filterColumn} = 1`;
+  elements.forecastPeriod.textContent = `${model.periods[0].label} to ${
+    model.periods[model.periods.length - 1].label
+  }`;
+  elements.calculationMonths.textContent = `${model.calculationMonths} months`;
   addLog("Config loaded successfully.");
 }
 
