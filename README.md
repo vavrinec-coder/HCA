@@ -159,7 +159,7 @@ This MVP has no authentication. Do not treat the preview endpoint as production-
 The production add-in is intended to be hosted on GitHub Pages:
 
 ```text
-https://vavrinec-coder.github.io/HCA/taskpane.html
+https://xf1-advisory-services.github.io/HCA/taskpane.html
 ```
 
 Upload this manifest in Microsoft 365 Admin Center:
