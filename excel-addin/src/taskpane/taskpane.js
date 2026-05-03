@@ -59,6 +59,7 @@ async function handlePayrollRecalc() {
     const payload = await buildPayrollPayload(startedAt);
     updateConfigUi(payload.source, payload.model);
     updateMetrics(payload.metrics);
+    await clearOutputRange(payload.output);
     setStatus("Workbook load complete. Sending preview to backend...");
 
     const backendSummary = await sendLoadPreview(payload);
@@ -452,6 +453,44 @@ async function sendLoadPreview(payload) {
   }
 
   return response.json();
+}
+
+async function clearOutputRange(outputConfig) {
+  const cleared = await Excel.run(async (context) => {
+    const outputSheet = context.workbook.worksheets.getItem(outputConfig.sheet);
+    const usedRange = outputSheet.getUsedRangeOrNullObject();
+    usedRange.load(["rowIndex", "columnIndex", "rowCount", "columnCount"]);
+
+    await context.sync();
+
+    if (usedRange.isNullObject) {
+      addLog(`No existing output found on ${outputConfig.sheet}.`);
+      return false;
+    }
+
+    const firstRowToClear = Math.max(usedRange.rowIndex, 1);
+    const firstColumnToClear = Math.max(usedRange.columnIndex, 1);
+    const lastRow = usedRange.rowIndex + usedRange.rowCount - 1;
+    const lastColumn = usedRange.columnIndex + usedRange.columnCount - 1;
+    const rowCount = lastRow - firstRowToClear + 1;
+    const columnCount = lastColumn - firstColumnToClear + 1;
+
+    if (rowCount <= 0 || columnCount <= 0) {
+      addLog(`No clearable output found on ${outputConfig.sheet}.`);
+      return false;
+    }
+
+    outputSheet
+      .getRangeByIndexes(firstRowToClear, firstColumnToClear, rowCount, columnCount)
+      .clear(Excel.ClearApplyTo.all);
+
+    await context.sync();
+    return true;
+  });
+
+  if (cleared) {
+    addLog(`Cleared stale output from ${outputConfig.sheet}.`);
+  }
 }
 
 async function writePayrollOutputs(outputConfig, outputs) {
