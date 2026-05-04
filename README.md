@@ -1,8 +1,8 @@
 # External Calc Engine v01
 
-Initial MVP for a Windows Desktop Excel Office.js add-in plus a Python FastAPI calc engine.
+Windows Desktop Excel Office.js add-in plus a Python FastAPI calc engine.
 
-This version does not calculate payroll. It only proves that the Excel task pane can read the `Payroll` config row, bulk-load headers and data, filter rows where `Include in Load` equals `1`, and send a preview payload to the backend.
+The current version bulk-loads Payroll input rows from Excel, filters rows where `Include in LOAD` equals `1`, sends them to the backend, and writes payroll outputs back to the workbook.
 
 ## Project Structure
 
@@ -71,51 +71,65 @@ For Windows Desktop Excel, the simple local sideload path is:
 The workbook must contain:
 
 - A `Config` sheet.
+- A workbook-level named range `HCA.Engine.Config` that points to the Config table.
 - Config columns named:
   - `Section`
-  - `Setting`
+  - `Type`
+  - `Key`
+  - `Description`
   - `Value`
+  - `Value Type`
 
-Required `Model` settings:
+Required model keys:
 
-- `Last actuals date`
-- `Model end date`
-- `Financial year end month`
+- `model.last_actuals_date`
+- `model.model_end_date`
+- `model.financial_year_end_month`
 
-Required `Payroll` settings:
+Required payroll keys:
 
-- Data sheet: `PayrollData`
-- `Data load Sheet`
-- `Cell range`
-- `Headers`
-- `Filter column`
+- `payroll.filter_column`
+- `payroll.data_range`
+- `payroll.headers_range`
+- `payroll.benefits.medical.domestic`
+- `payroll.benefits.medical.international`
+- `payroll.benefits.401k.domestic`
+- `payroll.benefits.401k.international`
+- `payroll.benefits.other.domestic`
+- `payroll.benefits.other.international`
+- `payroll.output.headcount`
+- `payroll.output.base_salary_total`
+- `payroll.output.base_salary_domestic`
+- `payroll.output.base_salary_international`
+- `payroll.output.base_salary_cogs`
+- `payroll.output.medical`
+- `payroll.output.401k`
+- `payroll.output.other_benefits`
 
 Example:
 
 ```text
-Section   Setting                  Value
-Model     Last actuals date        31-Mar-26
-Model     Model end date           30-Apr-28
-Model     Financial year end month 4
-Payroll   Data load Sheet          PayrollData
-Payroll   Cell range               B5:R1531
-Payroll   Headers                  B4:R4
-Payroll   Filter column            R
-Payroll   Output sheet             HCA_Output
-Payroll   Headcount output start cell E4
-Payroll   Base salary total output start cell E17
-Payroll   Base salary domestic output start cell E30
-Payroll   Base salary international output start cell E44
-Payroll   Base salary COGS output start cell E57
-Payroll   Medical - Domestic       2464
-Payroll   Medical - International  2162
-Payroll   401k - Domestic          432
-Payroll   401k - International     501
-Payroll   Other Benefits - Domestic 157
-Payroll   Other Benefits - International 20
-Payroll   Medical output start cell E70
-Payroll   401k output start cell E83
-Payroll   Other Benefits output start cell E96
+Key                                      Value
+model.last_actuals_date                  31-Mar-26
+model.model_end_date                     30-Apr-28
+model.financial_year_end_month           4
+payroll.filter_column                    PayrollData!R:R
+payroll.data_range                       PayrollData!B5:R1531
+payroll.headers_range                    PayrollData!B4:R4
+payroll.benefits.medical.domestic        2464
+payroll.benefits.medical.international   2162
+payroll.benefits.401k.domestic           432
+payroll.benefits.401k.international      501
+payroll.benefits.other.domestic          157
+payroll.benefits.other.international     20
+payroll.output.headcount                 HCA_Output!E4
+payroll.output.base_salary_total         HCA_Output!E17
+payroll.output.base_salary_domestic      HCA_Output!E30
+payroll.output.base_salary_international HCA_Output!E44
+payroll.output.base_salary_cogs          HCA_Output!E57
+payroll.output.medical                   HCA_Output!E70
+payroll.output.401k                      HCA_Output!E83
+payroll.output.other_benefits            HCA_Output!E96
 ```
 
 Headcount/FTE output is written as a table starting at the configured start cell:

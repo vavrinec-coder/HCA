@@ -7,7 +7,8 @@
     "certs": "office-addin-dev-certs install",
     "dev": "vite --host localhost --port 3000",
     "build": "vite build",
-    "preview": "vite preview --host localhost --port 3000"
+    "preview": "vite preview --host localhost --port 3000",
+    "test": "node --test src/taskpane/config.test.js"
   },
   "dependencies": {
     "@vitejs/plugin-basic-ssl": "^1.1.0",

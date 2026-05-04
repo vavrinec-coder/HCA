@@ -100,58 +100,59 @@ render.yaml
 
 ## Workbook Config Contract
 
-The add-in reads the whole used range of the `Config` sheet in one bulk operation. It does not hardcode Config cell addresses.
+The add-in reads the workbook-level named range `HCA.Engine.Config` in one bulk operation. It does not hardcode Config cell addresses.
 
-The Config sheet must have these headers:
+The named range currently refers to:
 
 ```text
-Section | Setting | Value
+Config!$B$2:$G$150
 ```
 
-Required current settings:
+The Config range must have these headers:
 
 ```text
-Model   Last actuals date
-Model   Model end date
-Model   Financial year end month
-
-Payroll Data load Sheet
-Payroll Cell range
-Payroll Headers
-Payroll Filter column
-Payroll Output sheet
-Payroll Headcount output start cell
-Payroll Base salary total output start cell
-Payroll Base salary domestic output start cell
-Payroll Base salary international output start cell
-Payroll Base salary COGS output start cell
-Payroll Medical - Domestic
-Payroll Medical - International
-Payroll 401k - Domestic
-Payroll 401k - International
-Payroll Other Benefits - Domestic
-Payroll Other Benefits - International
-Payroll Medical output start cell
-Payroll 401k output start cell
-Payroll Other Benefits output start cell
+Section | Type | Key | Description | Value | Value Type
 ```
 
-Example values from the current workbook:
+The `Key` column is the engine contract. `Section`, `Type`, and `Description` are for readability. Required current keys:
 
 ```text
-Payroll Data load Sheet                         PayrollData
-Payroll Cell range                              B5:R1531
-Payroll Headers                                 B4:R4
-Payroll Filter column                           R
-Payroll Output sheet                            HCA_Output
-Payroll Headcount output start cell             E4
-Payroll Base salary total output start cell      E17
-Payroll Base salary domestic output start cell   E30
-Payroll Base salary international output start cell E44
-Payroll Base salary COGS output start cell       E57
-Payroll Medical output start cell                E70
-Payroll 401k output start cell                   E83
-Payroll Other Benefits output start cell         E96
+model.last_actuals_date
+model.model_end_date
+model.financial_year_end_month
+payroll.benefits.medical.domestic
+payroll.benefits.medical.international
+payroll.benefits.401k.domestic
+payroll.benefits.401k.international
+payroll.benefits.other.domestic
+payroll.benefits.other.international
+payroll.filter_column
+payroll.data_range
+payroll.headers_range
+payroll.output.headcount
+payroll.output.base_salary_total
+payroll.output.base_salary_domestic
+payroll.output.base_salary_international
+payroll.output.base_salary_cogs
+payroll.output.medical
+payroll.output.401k
+payroll.output.other_benefits
+```
+
+Example range values:
+
+```text
+payroll.filter_column                   PayrollData!R:R
+payroll.data_range                      PayrollData!B5:R1531
+payroll.headers_range                   PayrollData!B4:R4
+payroll.output.headcount                HCA_Output!E4
+payroll.output.base_salary_total        HCA_Output!E17
+payroll.output.base_salary_domestic     HCA_Output!E30
+payroll.output.base_salary_international HCA_Output!E44
+payroll.output.base_salary_cogs         HCA_Output!E57
+payroll.output.medical                  HCA_Output!E70
+payroll.output.401k                     HCA_Output!E83
+payroll.output.other_benefits           HCA_Output!E96
 ```
 
 ## PayrollData Contract
