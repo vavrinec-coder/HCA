@@ -15,6 +15,7 @@ BONUS_PLAN_FIELD_INDEX = 6
 BONUS_PERCENT_FIELD_INDEX = 7
 BONUS_FIXED_FIELD_INDEX = 8
 FAR_FUTURE_DATE = date(2099, 12, 31)
+BONUS_PAYOUT_MONTHS = {2, 5, 8, 11}
 
 
 def calculate_payroll_outputs(
@@ -67,6 +68,9 @@ def calculate_payroll_outputs(
     bonus_accrual_totals: dict[str, list[float]] = defaultdict(
         lambda: [0.0] * len(periods)
     )
+    bonus_payout_totals: dict[str, list[float]] = defaultdict(
+        lambda: [0.0] * len(periods)
+    )
     skipped_rows = 0
 
     for row in rows:
@@ -86,6 +90,7 @@ def calculate_payroll_outputs(
         bonus_percent = parse_number(row.get(bonus_percent_field))
         bonus_fixed_amount = parse_number(row.get(bonus_fixed_field))
         final_bonus_cycle_end = final_eligible_bonus_cycle_end(bonus_end_date)
+        employee_bonus_accruals = [0.0] * len(periods)
 
         for index, period in enumerate(periods):
             month_end = period["date"]
@@ -121,12 +126,20 @@ def calculate_payroll_outputs(
                 bonus_percent,
                 bonus_fixed_amount,
             )
-            bonus_accrual_totals[department][index] += (
+            employee_bonus_accrual = (
                 monthly_bonus_base
                 * bonus_plan_multiplier(bonus_plan, bonus_assumptions, index)
                 * benefit_multiplier
                 * bonus_accrual_flag(final_bonus_cycle_end, month_end)
             )
+            employee_bonus_accruals[index] = employee_bonus_accrual
+            bonus_accrual_totals[department][index] += employee_bonus_accrual
+
+        for index, period in enumerate(periods):
+            if is_bonus_payout_month(period["date"]):
+                bonus_payout_totals[department][index] += sum(
+                    employee_bonus_accruals[max(0, index - 3) : index]
+                )
 
     departments = sorted(headcount_totals)
     domestic_departments = sorted(domestic_salary_totals)
@@ -136,6 +149,7 @@ def calculate_payroll_outputs(
     retirement_401k_departments = sorted(retirement_401k_totals)
     other_benefits_departments = sorted(other_benefits_totals)
     bonus_accrual_departments = sorted(bonus_accrual_totals)
+    bonus_payout_departments = sorted(bonus_payout_totals)
 
     return {
         "headcount": {
@@ -218,6 +232,16 @@ def calculate_payroll_outputs(
                 decimals=0,
             ),
             "departments": bonus_accrual_departments,
+            "periods": serialize_periods(periods),
+        },
+        "bonusPayout": {
+            "table": output_table(
+                bonus_payout_departments,
+                periods,
+                bonus_payout_totals,
+                decimals=0,
+            ),
+            "departments": bonus_payout_departments,
             "periods": serialize_periods(periods),
         },
     }
@@ -399,6 +423,10 @@ def performance_bonus_multiplier(
 
 def bonus_accrual_flag(final_bonus_cycle_end: date, month_end: date) -> float:
     return 1.0 if final_bonus_cycle_end > month_end else 0.0
+
+
+def is_bonus_payout_month(month_end: date) -> bool:
+    return month_end.month in BONUS_PAYOUT_MONTHS
 
 
 def final_eligible_bonus_cycle_end(termination_date: date) -> date:

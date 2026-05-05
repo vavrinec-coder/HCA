@@ -101,6 +101,14 @@ class PayrollBonusAccrualTests(unittest.TestCase):
                 ["Sales", 2100, 1100, 1100],
             ],
         )
+        self.assertEqual(
+            outputs["bonusPayout"]["table"],
+            [
+                ["Department", "Apr 2026", "May 2026", "Jun 2026"],
+                ["G&A", 0, 0, 0],
+                ["Sales", 0, 2100, 0],
+            ],
+        )
 
 
 if __name__ == "__main__":

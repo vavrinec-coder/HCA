@@ -252,6 +252,9 @@ async function writePayrollOutputs(outputConfig, outputs) {
   if (!outputs?.bonusAccrual?.table?.length) {
     throw new Error("Backend did not return a bonus accrual output table.");
   }
+  if (!outputs?.bonusPayout?.table?.length) {
+    throw new Error("Backend did not return a bonus payout output table.");
+  }
 
   await Excel.run(async (context) => {
     const outputSheet = context.workbook.worksheets.getItem(outputConfig.sheet);
@@ -307,6 +310,12 @@ async function writePayrollOutputs(outputConfig, outputs) {
       outputSheet,
       outputConfig.bonusAccrualStartCell,
       outputs.bonusAccrual.table,
+      "#,##0"
+    );
+    writeOutputTable(
+      outputSheet,
+      outputConfig.bonusPayoutStartCell,
+      outputs.bonusPayout.table,
       "#,##0"
     );
 

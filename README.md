@@ -113,6 +113,7 @@ Required payroll keys:
 - `payroll.output.401k`
 - `payroll.output.other_benefits`
 - `payroll.output.bonus_accrual`
+- `payroll.output.bonus_payout`
 
 Example:
 
@@ -146,6 +147,7 @@ payroll.output.medical                   HCA_Output!E70
 payroll.output.401k                      HCA_Output!E83
 payroll.output.other_benefits            HCA_Output!E96
 payroll.output.bonus_accrual             HCA_Output!E110
+payroll.output.bonus_payout              HCA_Output!E124
 ```
 
 Headcount/FTE output is written as a table starting at the configured start cell:
@@ -175,6 +177,13 @@ else:
     monthly bonus base = annual salary for financial year / 12 * Bonus %
 
 bonus accrual = monthly bonus base * plan multiplier * worked-in-month gate * bonus accrual flag
+```
+
+Bonus payout output uses:
+
+```text
+bonus payout is calculated only in Feb, May, Aug, and Nov
+bonus payout = sum of available prior 3 forecast-month bonus accruals
 ```
 
 ## Render Backend

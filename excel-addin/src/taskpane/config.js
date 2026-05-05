@@ -200,6 +200,10 @@ function buildOutputConfig(settings) {
       requiredSetting(settings, "payroll.output.bonus_accrual"),
       "payroll.output.bonus_accrual"
     ),
+    bonusPayoutStartCell: parseSheetReference(
+      requiredSetting(settings, "payroll.output.bonus_payout"),
+      "payroll.output.bonus_payout"
+    ),
   };
   const sheet = references.headcountStartCell.sheet;
 

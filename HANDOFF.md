@@ -17,6 +17,7 @@ It does not yet attempt to replace the full payroll model. Current implemented o
 - 401k benefits
 - Other benefits
 - Bonus accrual
+- Bonus payout
 
 ## Deployment
 
@@ -146,6 +147,7 @@ payroll.output.medical
 payroll.output.401k
 payroll.output.other_benefits
 payroll.output.bonus_accrual
+payroll.output.bonus_payout
 ```
 
 Example range values:
@@ -165,6 +167,7 @@ payroll.output.other_benefits           HCA_Output!E96
 payroll.net_new_ARR_achieved            C_Payroll!BP28:CN28
 payroll.burn_multiple_achieved          C_Payroll!BP29:CN29
 payroll.output.bonus_accrual            HCA_Output!E110
+payroll.output.bonus_payout             HCA_Output!E124
 ```
 
 ## PayrollData Contract
@@ -297,6 +300,24 @@ min(Bonus Cap, Net New ARR Achieved %) * Net New ARR Weight
 ```
 
 The worked-in-month gate is `1` when FTE is above `0`; bonus accrual is not prorated by FTE. The bonus accrual flag is `1` only when the final eligible bonus cycle end is strictly after the current period end.
+
+### Bonus Payout
+
+Bonus payout is calculated by employee/month and grouped by Department.
+
+Payout months are:
+
+```text
+February, May, August, November
+```
+
+For each employee in a payout month:
+
+```text
+bonus payout = sum of available prior 3 forecast-month bonus accruals
+```
+
+The engine does not backfill pre-forecast accruals. For example, if the forecast starts in April 2026, May 2026 payout includes April 2026 bonus accrual only.
 
 ## Development Workflow
 

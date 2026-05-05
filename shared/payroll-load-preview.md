@@ -36,7 +36,8 @@ The add-in sends this shape to `POST /payroll/load-preview`:
     "medicalStartCell": "E70",
     "retirement401kStartCell": "E83",
     "otherBenefitsStartCell": "E96",
-    "bonusAccrualStartCell": "E110"
+    "bonusAccrualStartCell": "E110",
+    "bonusPayoutStartCell": "E124"
   },
   "assumptions": {
     "benefits": {
