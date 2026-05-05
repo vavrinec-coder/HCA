@@ -68,9 +68,9 @@ async function handlePayrollRecalc() {
     setBackendUi("Success", "connected");
     elements.backendResult.textContent = backendSummary.status || "Success";
     elements.backendResult.className = "is-success";
-    setStatus("Payroll headcount output complete.", "success");
+    setStatus("Payroll outputs complete.", "success");
     addLog(
-      `Payroll headcount completed. ${payload.metrics.includedRows.toLocaleString()} rows included.`
+      `Payroll outputs completed. ${payload.metrics.includedRows.toLocaleString()} rows included.`
     );
   } catch (error) {
     setBackendUi("Error", "error");
@@ -94,9 +94,19 @@ async function buildPayrollPayload(startedAt) {
     const dataSheet = context.workbook.worksheets.getItem(config.payroll.dataLoadSheet);
     const headerRange = dataSheet.getRange(config.payroll.headers);
     const dataRange = dataSheet.getRange(config.payroll.cellRange);
+    const netNewArrRange = getReferencedRange(
+      context,
+      config.seriesRanges.netNewArrAchieved
+    );
+    const burnMultipleRange = getReferencedRange(
+      context,
+      config.seriesRanges.burnMultipleAchieved
+    );
 
     headerRange.load("values");
     dataRange.load("values");
+    netNewArrRange.load("values");
+    burnMultipleRange.load("values");
 
     await context.sync();
 
@@ -122,7 +132,14 @@ async function buildPayrollPayload(startedAt) {
         filterColumn: config.payroll.filterColumn,
       },
       output: config.output,
-      assumptions: config.assumptions,
+      assumptions: {
+        ...config.assumptions,
+        bonus: {
+          ...config.assumptions.bonus,
+          netNewArrAchieved: flattenRangeValues(netNewArrRange.values),
+          burnMultipleAchieved: flattenRangeValues(burnMultipleRange.values),
+        },
+      },
       metrics: {
         totalRows: rows.length,
         includedRows: included.length,
@@ -132,6 +149,16 @@ async function buildPayrollPayload(startedAt) {
       rows: included,
     };
   });
+}
+
+function getReferencedRange(context, reference) {
+  return context.workbook.worksheets
+    .getItem(reference.sheet)
+    .getRange(reference.address);
+}
+
+function flattenRangeValues(values) {
+  return (values || []).flat().filter((value) => value !== null && value !== "");
 }
 
 function normalizeHeaders(headers) {
@@ -222,6 +249,9 @@ async function writePayrollOutputs(outputConfig, outputs) {
   if (!outputs?.baseSalary?.total?.table?.length) {
     throw new Error("Backend did not return base salary output tables.");
   }
+  if (!outputs?.bonusAccrual?.table?.length) {
+    throw new Error("Backend did not return a bonus accrual output table.");
+  }
 
   await Excel.run(async (context) => {
     const outputSheet = context.workbook.worksheets.getItem(outputConfig.sheet);
@@ -271,6 +301,12 @@ async function writePayrollOutputs(outputConfig, outputs) {
       outputSheet,
       outputConfig.otherBenefitsStartCell,
       outputs.benefits.otherBenefits.table,
+      "#,##0"
+    );
+    writeOutputTable(
+      outputSheet,
+      outputConfig.bonusAccrualStartCell,
+      outputs.bonusAccrual.table,
       "#,##0"
     );
 

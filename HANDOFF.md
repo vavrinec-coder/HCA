@@ -16,6 +16,7 @@ It does not yet attempt to replace the full payroll model. Current implemented o
 - Medical benefits
 - 401k benefits
 - Other benefits
+- Bonus accrual
 
 ## Deployment
 
@@ -126,6 +127,13 @@ payroll.benefits.401k.domestic
 payroll.benefits.401k.international
 payroll.benefits.other.domestic
 payroll.benefits.other.international
+payroll.net_new_ARR_achieved
+payroll.burn_multiple_achieved
+payroll.bonus_cap
+payroll.exec_bonus_NNAR_weight
+payroll.exec_bonus_burn_multiple_weight
+payroll.incentive_bonus_NNAR_weight
+payroll.incentive_bonus_burn_multiple_weight
 payroll.filter_column
 payroll.data_range
 payroll.headers_range
@@ -137,6 +145,7 @@ payroll.output.base_salary_cogs
 payroll.output.medical
 payroll.output.401k
 payroll.output.other_benefits
+payroll.output.bonus_accrual
 ```
 
 Example range values:
@@ -153,6 +162,9 @@ payroll.output.base_salary_cogs         HCA_Output!E57
 payroll.output.medical                  HCA_Output!E70
 payroll.output.401k                     HCA_Output!E83
 payroll.output.other_benefits           HCA_Output!E96
+payroll.net_new_ARR_achieved            C_Payroll!BP28:CN28
+payroll.burn_multiple_achieved          C_Payroll!BP29:CN29
+payroll.output.bonus_accrual            HCA_Output!E110
 ```
 
 ## PayrollData Contract
@@ -258,6 +270,34 @@ Outputs:
 
 Each output is grouped by Department.
 
+### Bonus Accrual
+
+Bonus accrual is calculated by employee/month and grouped by Department.
+
+```text
+if Bonus $ > 0:
+    monthly bonus base = Bonus $ / 12
+else:
+    monthly bonus base = annual salary for financial year / 12 * Bonus %
+```
+
+Plan multipliers:
+
+- Customer Success Plan: 1.0
+- MBO Plan - Fixed Bonus: 1.0
+- Executive Plan: performance-based using Executive weights
+- Halcyon Incentive Bonus: performance-based using Incentive weights
+- na, No Plan, Services Plan, blank, or unknown plan: 0
+
+Performance plans use:
+
+```text
+min(Bonus Cap, Net New ARR Achieved %) * Net New ARR Weight
++ min(Bonus Cap, Burn Multiple Achieved %) * Burn Multiple Weight
+```
+
+The worked-in-month gate is `1` when FTE is above `0`; bonus accrual is not prorated by FTE. The bonus accrual flag is `1` only when the final eligible bonus cycle end is strictly after the current period end.
+
 ## Development Workflow
 
 After changes, run:
@@ -299,4 +339,4 @@ Render deploys the backend from the company repo.
 - Add warnings in task pane for skipped rows or unknown Status values.
 - Move fixed PayrollData field indexes to Config if the model layout becomes less stable.
 - Add unit tests for payroll calculations.
-- Add remaining payroll lines such as bonus, severance, payroll taxes, or allocation logic.
+- Add remaining payroll lines such as severance, payroll taxes, or allocation logic.

@@ -26,6 +26,14 @@ test("parseConfig reads the named-range config structure by key", () => {
     ["2. Payroll", "Output Range", "payroll.output.medical", "Medical", "HCA_Output!E70", "Reference - Starting Cell"],
     ["2. Payroll", "Output Range", "payroll.output.401k", "401k", "HCA_Output!E83", "Reference - Starting Cell"],
     ["2. Payroll", "Output Range", "payroll.output.other_benefits", "Other Benefits", "HCA_Output!E96", "Reference - Starting Cell"],
+    ["2. Payroll", "Assumption - series", "payroll.net_new_ARR_achieved", "Net New ARR - Achieved %", "C_Payroll!BP28:CN28", "Reference - Cell Range"],
+    ["2. Payroll", "Assumption - series", "payroll.burn_multiple_achieved", "Burn Multiple Achieved %", "C_Payroll!BP29:CN29", "Reference - Cell Range"],
+    ["2. Payroll", "Assumption - constant", "payroll.bonus_cap", "Bonus Cap", 2, "Number"],
+    ["2. Payroll", "Output Range", "payroll.output.bonus_accrual", "Bonus Accrual by Department by Month", "HCA_Output!E110", "Reference - Starting Cell"],
+    ["2. Payroll", "Assumption - constant", "payroll.exec_bonus_NNAR_weight", "Net New ARR weight - Executive Bonus Plan", 0.75, "Number"],
+    ["2. Payroll", "Assumption - constant", "payroll.exec_bonus_burn_multiple_weight", "Burn Multiple Plan - Executive Bonus Plan", 0.25, "Number"],
+    ["2. Payroll", "Assumption - constant", "payroll.incentive_bonus_NNAR_weight", "Net New ARR weight - Halcyon Incentive Bonus", 1, "Number"],
+    ["2. Payroll", "Assumption - constant", "payroll.incentive_bonus_burn_multiple_weight", "Burn Multiple Plan - Halcyon Incentive Bonus", 0, "Number"],
   ]);
 
   assert.equal(config.payroll.dataLoadSheet, "PayrollData");
@@ -35,7 +43,21 @@ test("parseConfig reads the named-range config structure by key", () => {
   assert.equal(config.output.sheet, "HCA_Output");
   assert.equal(config.output.headcountStartCell, "E4");
   assert.equal(config.output.otherBenefitsStartCell, "E96");
+  assert.equal(config.output.bonusAccrualStartCell, "E110");
   assert.equal(config.assumptions.benefits.otherBenefits.international, 20);
+  assert.equal(config.assumptions.bonus.cap, 2);
+  assert.equal(config.assumptions.bonus.executivePlan.netNewArrWeight, 0.75);
+  assert.equal(config.assumptions.bonus.executivePlan.burnMultipleWeight, 0.25);
+  assert.equal(config.assumptions.bonus.incentivePlan.netNewArrWeight, 1);
+  assert.equal(config.assumptions.bonus.incentivePlan.burnMultipleWeight, 0);
+  assert.deepEqual(config.seriesRanges.netNewArrAchieved, {
+    sheet: "C_Payroll",
+    address: "BP28:CN28",
+  });
+  assert.deepEqual(config.seriesRanges.burnMultipleAchieved, {
+    sheet: "C_Payroll",
+    address: "BP29:CN29",
+  });
   assert.equal(config.model.calculationMonths, 25);
   assert.equal(config.model.periods[0].date, "2026-04-30");
   assert.equal(config.model.periods.at(-1).date, "2028-04-30");

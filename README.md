@@ -97,6 +97,13 @@ Required payroll keys:
 - `payroll.benefits.401k.international`
 - `payroll.benefits.other.domestic`
 - `payroll.benefits.other.international`
+- `payroll.net_new_ARR_achieved`
+- `payroll.burn_multiple_achieved`
+- `payroll.bonus_cap`
+- `payroll.exec_bonus_NNAR_weight`
+- `payroll.exec_bonus_burn_multiple_weight`
+- `payroll.incentive_bonus_NNAR_weight`
+- `payroll.incentive_bonus_burn_multiple_weight`
 - `payroll.output.headcount`
 - `payroll.output.base_salary_total`
 - `payroll.output.base_salary_domestic`
@@ -105,6 +112,7 @@ Required payroll keys:
 - `payroll.output.medical`
 - `payroll.output.401k`
 - `payroll.output.other_benefits`
+- `payroll.output.bonus_accrual`
 
 Example:
 
@@ -122,6 +130,13 @@ payroll.benefits.401k.domestic           432
 payroll.benefits.401k.international      501
 payroll.benefits.other.domestic          157
 payroll.benefits.other.international     20
+payroll.net_new_ARR_achieved             C_Payroll!BP28:CN28
+payroll.burn_multiple_achieved           C_Payroll!BP29:CN29
+payroll.bonus_cap                        200%
+payroll.exec_bonus_NNAR_weight           75%
+payroll.exec_bonus_burn_multiple_weight  25%
+payroll.incentive_bonus_NNAR_weight      100%
+payroll.incentive_bonus_burn_multiple_weight 0%
 payroll.output.headcount                 HCA_Output!E4
 payroll.output.base_salary_total         HCA_Output!E17
 payroll.output.base_salary_domestic      HCA_Output!E30
@@ -130,6 +145,7 @@ payroll.output.base_salary_cogs          HCA_Output!E57
 payroll.output.medical                   HCA_Output!E70
 payroll.output.401k                      HCA_Output!E83
 payroll.output.other_benefits            HCA_Output!E96
+payroll.output.bonus_accrual             HCA_Output!E110
 ```
 
 Headcount/FTE output is written as a table starting at the configured start cell:
@@ -150,6 +166,17 @@ Benefits output uses:
 monthly benefit cost = full monthly benefit assumption when employee FTE is above 0
 ```
 
+Bonus accrual output uses:
+
+```text
+if Bonus $ > 0:
+    monthly bonus base = Bonus $ / 12
+else:
+    monthly bonus base = annual salary for financial year / 12 * Bonus %
+
+bonus accrual = monthly bonus base * plan multiplier * worked-in-month gate * bonus accrual flag
+```
+
 ## Render Backend
 
 The backend is ready for Render deployment from the repo root using `render.yaml`.
@@ -163,7 +190,7 @@ CORS_ORIGINS=*
 After the add-in is hosted at a stable URL, restrict it to that origin:
 
 ```text
-CORS_ORIGINS=https://your-github-username.github.io
+CORS_ORIGINS=https://xf1-advisory-services.github.io
 ```
 
 This MVP has no authentication. Do not treat the preview endpoint as production-secure.

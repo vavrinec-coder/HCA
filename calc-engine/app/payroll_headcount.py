@@ -11,6 +11,10 @@ START_DATE_FIELD_INDEX = 4
 END_DATE_FIELD_INDEX = 5
 FS_CATEGORY_FIELD_INDEX = 1
 STATUS_FIELD_INDEX = 2
+BONUS_PLAN_FIELD_INDEX = 6
+BONUS_PERCENT_FIELD_INDEX = 7
+BONUS_FIXED_FIELD_INDEX = 8
+FAR_FUTURE_DATE = date(2099, 12, 31)
 
 
 def calculate_payroll_outputs(
@@ -24,6 +28,9 @@ def calculate_payroll_outputs(
     end_date_field = field_name(headers, END_DATE_FIELD_INDEX, "end date")
     fs_category_field = field_name(headers, FS_CATEGORY_FIELD_INDEX, "FS category")
     status_field = field_name(headers, STATUS_FIELD_INDEX, "status")
+    bonus_plan_field = field_name(headers, BONUS_PLAN_FIELD_INDEX, "bonus plan")
+    bonus_percent_field = field_name(headers, BONUS_PERCENT_FIELD_INDEX, "bonus percent")
+    bonus_fixed_field = field_name(headers, BONUS_FIXED_FIELD_INDEX, "bonus fixed amount")
     periods = [
         {
             "date": parse_iso_date(period.date),
@@ -56,14 +63,18 @@ def calculate_payroll_outputs(
     other_benefits_totals: dict[str, list[float]] = defaultdict(
         lambda: [0.0] * len(periods)
     )
+    bonus_assumptions = parse_bonus_assumptions(assumptions)
+    bonus_accrual_totals: dict[str, list[float]] = defaultdict(
+        lambda: [0.0] * len(periods)
+    )
     skipped_rows = 0
 
     for row in rows:
         department = normalize_text(row.get(department_field))
         start_date = parse_date_value(row.get(start_date_field))
-        end_date = parse_date_value(row.get(end_date_field)) or parse_iso_date(
-            model.calculationEndDate
-        )
+        raw_end_date = parse_date_value(row.get(end_date_field))
+        end_date = raw_end_date or parse_iso_date(model.calculationEndDate)
+        bonus_end_date = raw_end_date or FAR_FUTURE_DATE
 
         if not department or start_date is None:
             skipped_rows += 1
@@ -71,6 +82,10 @@ def calculate_payroll_outputs(
 
         status = normalize_key(row.get(status_field))
         fs_category = normalize_key(row.get(fs_category_field))
+        bonus_plan = normalize_key(row.get(bonus_plan_field))
+        bonus_percent = parse_number(row.get(bonus_percent_field))
+        bonus_fixed_amount = parse_number(row.get(bonus_fixed_field))
+        final_bonus_cycle_end = final_eligible_bonus_cycle_end(bonus_end_date)
 
         for index, period in enumerate(periods):
             month_end = period["date"]
@@ -101,6 +116,18 @@ def calculate_payroll_outputs(
                 benefit_multiplier * status_rates["otherBenefits"]
             )
 
+            monthly_bonus_base = monthly_bonus_amount(
+                annual_salary,
+                bonus_percent,
+                bonus_fixed_amount,
+            )
+            bonus_accrual_totals[department][index] += (
+                monthly_bonus_base
+                * bonus_plan_multiplier(bonus_plan, bonus_assumptions, index)
+                * benefit_multiplier
+                * bonus_accrual_flag(final_bonus_cycle_end, month_end)
+            )
+
     departments = sorted(headcount_totals)
     domestic_departments = sorted(domestic_salary_totals)
     international_departments = sorted(international_salary_totals)
@@ -108,6 +135,7 @@ def calculate_payroll_outputs(
     medical_departments = sorted(medical_totals)
     retirement_401k_departments = sorted(retirement_401k_totals)
     other_benefits_departments = sorted(other_benefits_totals)
+    bonus_accrual_departments = sorted(bonus_accrual_totals)
 
     return {
         "headcount": {
@@ -180,6 +208,16 @@ def calculate_payroll_outputs(
                 ),
                 "departments": other_benefits_departments,
             },
+            "periods": serialize_periods(periods),
+        },
+        "bonusAccrual": {
+            "table": output_table(
+                bonus_accrual_departments,
+                periods,
+                bonus_accrual_totals,
+                decimals=0,
+            ),
+            "departments": bonus_accrual_departments,
             "periods": serialize_periods(periods),
         },
     }
@@ -266,6 +304,9 @@ def parse_number(value: Any) -> float:
     if not text or text == "-":
         return 0.0
 
+    if text.endswith("%"):
+        return float(text[:-1]) / 100
+
     return float(text)
 
 
@@ -299,6 +340,119 @@ def parse_benefit_rates(assumptions: dict[str, Any]) -> dict[str, dict[str, floa
             ),
         },
     }
+
+
+def monthly_bonus_amount(
+    annual_salary: float,
+    bonus_percent: float,
+    bonus_fixed_amount: float,
+) -> float:
+    if bonus_fixed_amount > 0:
+        return bonus_fixed_amount / 12
+
+    return (annual_salary / 12) * bonus_percent
+
+
+def bonus_plan_multiplier(
+    plan: str,
+    assumptions: dict[str, Any],
+    period_index: int,
+) -> float:
+    if plan in ("customer success plan", "mbo plan - fixed bonus"):
+        return 1.0
+
+    if plan == "executive plan":
+        return performance_bonus_multiplier(
+            assumptions["cap"],
+            assumptions["netNewArrAchieved"],
+            assumptions["burnMultipleAchieved"],
+            assumptions["executivePlan"],
+            period_index,
+        )
+
+    if plan == "halcyon incentive bonus":
+        return performance_bonus_multiplier(
+            assumptions["cap"],
+            assumptions["netNewArrAchieved"],
+            assumptions["burnMultipleAchieved"],
+            assumptions["incentivePlan"],
+            period_index,
+        )
+
+    return 0.0
+
+
+def performance_bonus_multiplier(
+    cap: float,
+    net_new_arr_achieved: list[float],
+    burn_multiple_achieved: list[float],
+    weights: dict[str, float],
+    period_index: int,
+) -> float:
+    return (
+        min(cap, value_at(net_new_arr_achieved, period_index))
+        * weights["netNewArrWeight"]
+        + min(cap, value_at(burn_multiple_achieved, period_index))
+        * weights["burnMultipleWeight"]
+    )
+
+
+def bonus_accrual_flag(final_bonus_cycle_end: date, month_end: date) -> float:
+    return 1.0 if final_bonus_cycle_end > month_end else 0.0
+
+
+def final_eligible_bonus_cycle_end(termination_date: date) -> date:
+    months_back = (termination_date.month - 2) % 3
+    cycle_month = termination_date.month - months_back
+    cycle_year = termination_date.year
+
+    if cycle_month <= 0:
+        cycle_month += 12
+        cycle_year -= 1
+
+    return date(cycle_year, cycle_month, monthrange(cycle_year, cycle_month)[1])
+
+
+def parse_bonus_assumptions(assumptions: dict[str, Any]) -> dict[str, Any]:
+    bonus = assumptions.get("bonus", {})
+
+    return {
+        "cap": parse_number(bonus.get("cap")),
+        "netNewArrAchieved": parse_number_series(bonus.get("netNewArrAchieved")),
+        "burnMultipleAchieved": parse_number_series(
+            bonus.get("burnMultipleAchieved")
+        ),
+        "executivePlan": {
+            "netNewArrWeight": parse_number(
+                bonus.get("executivePlan", {}).get("netNewArrWeight")
+            ),
+            "burnMultipleWeight": parse_number(
+                bonus.get("executivePlan", {}).get("burnMultipleWeight")
+            ),
+        },
+        "incentivePlan": {
+            "netNewArrWeight": parse_number(
+                bonus.get("incentivePlan", {}).get("netNewArrWeight")
+            ),
+            "burnMultipleWeight": parse_number(
+                bonus.get("incentivePlan", {}).get("burnMultipleWeight")
+            ),
+        },
+    }
+
+
+def parse_number_series(values: Any) -> list[float]:
+    if not isinstance(values, list):
+        return []
+
+    return [parse_number(value) for value in values]
+
+
+def value_at(values: list[float], index: int) -> float:
+    if index >= len(values):
+        return 0.0
+
+    return values[index]
 
 
 def parse_date_value(value: Any) -> date | None:

@@ -102,6 +102,42 @@ export function parseConfig(values) {
         ),
       },
     },
+    bonus: {
+      cap: parseNumberSetting(
+        requiredSetting(settings, "payroll.bonus_cap"),
+        "payroll.bonus_cap"
+      ),
+      executivePlan: {
+        netNewArrWeight: parseNumberSetting(
+          requiredSetting(settings, "payroll.exec_bonus_nnar_weight"),
+          "payroll.exec_bonus_NNAR_weight"
+        ),
+        burnMultipleWeight: parseNumberSetting(
+          requiredSetting(settings, "payroll.exec_bonus_burn_multiple_weight"),
+          "payroll.exec_bonus_burn_multiple_weight"
+        ),
+      },
+      incentivePlan: {
+        netNewArrWeight: parseNumberSetting(
+          requiredSetting(settings, "payroll.incentive_bonus_nnar_weight"),
+          "payroll.incentive_bonus_NNAR_weight"
+        ),
+        burnMultipleWeight: parseNumberSetting(
+          requiredSetting(settings, "payroll.incentive_bonus_burn_multiple_weight"),
+          "payroll.incentive_bonus_burn_multiple_weight"
+        ),
+      },
+    },
+  };
+  const seriesRanges = {
+    netNewArrAchieved: parseSheetReference(
+      requiredSetting(settings, "payroll.net_new_arr_achieved"),
+      "payroll.net_new_ARR_achieved"
+    ),
+    burnMultipleAchieved: parseSheetReference(
+      requiredSetting(settings, "payroll.burn_multiple_achieved"),
+      "payroll.burn_multiple_achieved"
+    ),
   };
 
   return {
@@ -122,6 +158,7 @@ export function parseConfig(values) {
     },
     output,
     assumptions,
+    seriesRanges,
   };
 }
 
@@ -158,6 +195,10 @@ function buildOutputConfig(settings) {
     otherBenefitsStartCell: parseSheetReference(
       requiredSetting(settings, "payroll.output.other_benefits"),
       "payroll.output.other_benefits"
+    ),
+    bonusAccrualStartCell: parseSheetReference(
+      requiredSetting(settings, "payroll.output.bonus_accrual"),
+      "payroll.output.bonus_accrual"
     ),
   };
   const sheet = references.headcountStartCell.sheet;

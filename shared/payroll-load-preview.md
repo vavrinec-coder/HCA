@@ -35,7 +35,8 @@ The add-in sends this shape to `POST /payroll/load-preview`:
     "baseSalaryCogsStartCell": "E57",
     "medicalStartCell": "E70",
     "retirement401kStartCell": "E83",
-    "otherBenefitsStartCell": "E96"
+    "otherBenefitsStartCell": "E96",
+    "bonusAccrualStartCell": "E110"
   },
   "assumptions": {
     "benefits": {
@@ -50,6 +51,19 @@ The add-in sends this shape to `POST /payroll/load-preview`:
       "otherBenefits": {
         "domestic": 157,
         "international": 20
+      }
+    },
+    "bonus": {
+      "cap": 2,
+      "netNewArrAchieved": [1.2],
+      "burnMultipleAchieved": [0.8],
+      "executivePlan": {
+        "netNewArrWeight": 0.75,
+        "burnMultipleWeight": 0.25
+      },
+      "incentivePlan": {
+        "netNewArrWeight": 1,
+        "burnMultipleWeight": 0
       }
     }
   },
@@ -69,4 +83,4 @@ The add-in sends this shape to `POST /payroll/load-preview`:
 }
 ```
 
-The MVP backend returns only a summary. It does not store data or calculate payroll.
+The backend returns a summary plus calculated payroll output tables. It does not store data.
