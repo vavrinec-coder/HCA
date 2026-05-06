@@ -4,6 +4,8 @@ Windows Desktop Excel Office.js add-in plus a Python FastAPI calc engine.
 
 The current version bulk-loads Payroll input rows from Excel, filters rows where `Include in LOAD` equals `1`, sends them to the backend, and writes payroll outputs back to the workbook.
 
+If Postgres is configured, the backend also stores each user's latest employee/month/output detail rows for future `LOAD_DETAIL` lookups.
+
 ## Project Structure
 
 - `excel-addin/` - Office.js task pane add-in.
@@ -79,6 +81,8 @@ The workbook must contain:
   - `Description`
   - `Value`
   - `Value Type`
+
+The task pane has a `User ID` field. For the MVP, each user should enter their work email address. This is used only to separate latest-run detail storage by user.
 
 Required model keys:
 
@@ -195,6 +199,23 @@ The first MVP uses this temporary environment variable:
 ```text
 CORS_ORIGINS=*
 ```
+
+Detail storage is optional. To enable it, create a Render Postgres database and add its internal database URL to the backend service:
+
+```text
+DATABASE_URL=<Render internal database URL>
+```
+
+When `DATABASE_URL` is not set, Payroll Recalc still works and detail storage is skipped.
+
+The backend creates these tables automatically:
+
+```text
+calc_runs
+calcs_detail_outputs
+```
+
+Only the latest run per `User ID` is retained. Each new saved run deletes that user's prior saved run and bulk inserts the new detail rows.
 
 After the add-in is hosted at a stable URL, restrict it to that origin:
 

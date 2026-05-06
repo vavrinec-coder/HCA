@@ -109,6 +109,36 @@ class PayrollBonusAccrualTests(unittest.TestCase):
                 ["Sales", 0, 2100, 0],
             ],
         )
+        self.assertIn(
+            {
+                "unit_id": "E1",
+                "department": "Sales",
+                "period_end_date": "2026-05-31",
+                "output_key": "payroll.output.bonus_payout",
+                "value": 1100,
+            },
+            outputs["detailRows"],
+        )
+        self.assertIn(
+            {
+                "unit_id": "E2",
+                "department": "Sales",
+                "period_end_date": "2026-05-31",
+                "output_key": "payroll.output.bonus_payout",
+                "value": 1000,
+            },
+            outputs["detailRows"],
+        )
+        self.assertIn(
+            {
+                "unit_id": "E1",
+                "department": "Sales",
+                "period_end_date": "2026-05-31",
+                "output_key": "payroll.output.base_salary_domestic",
+                "value": 10000,
+            },
+            outputs["detailRows"],
+        )
 
 
 if __name__ == "__main__":

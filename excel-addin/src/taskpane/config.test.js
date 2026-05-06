@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { getFilterOffset, parseConfig } from "./config.js";
+import { normalizeUserKey } from "./user.js";
 
 test("parseConfig reads the named-range config structure by key", () => {
   const config = parseConfig([
@@ -67,4 +68,11 @@ test("parseConfig reads the named-range config structure by key", () => {
 
 test("getFilterOffset handles a full column filter reference", () => {
   assert.equal(getFilterOffset("B5:R1531", "R"), 16);
+});
+
+test("normalizeUserKey keeps a stable lower-case user identifier", () => {
+  assert.equal(
+    normalizeUserKey(" Vavrinec@XF1Advisory.com "),
+    "vavrinec@xf1advisory.com"
+  );
 });

@@ -5,6 +5,7 @@ The add-in sends this shape to `POST /payroll/load-preview`:
 ```json
 {
   "section": "Payroll",
+  "userKey": "vavrinec@xf1advisory.com",
   "model": {
     "lastActualsDate": "2026-03-31",
     "modelEndDate": "2028-04-30",
@@ -85,3 +86,28 @@ The add-in sends this shape to `POST /payroll/load-preview`:
 ```
 
 The backend returns a summary plus calculated payroll output tables. It does not store data.
+If `DATABASE_URL` is configured, the backend also stores latest-run employee/month/output detail rows for the supplied `userKey`.
+
+The response includes detail save status:
+
+```json
+{
+  "detailSave": {
+    "status": "saved",
+    "runId": "example-run-id",
+    "rowsSaved": 283750
+  }
+}
+```
+
+If detail storage is not available, Payroll output still succeeds and the response reports:
+
+```json
+{
+  "detailSave": {
+    "status": "skipped",
+    "reason": "database_not_configured",
+    "rowsSaved": 0
+  }
+}
+```

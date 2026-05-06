@@ -1,5 +1,6 @@
 import "./taskpane.css";
 import { getConfigNamedRange, getFilterOffset, parseConfig } from "./config.js";
+import { normalizeUserKey } from "./user.js";
 
 const DEFAULT_BACKEND_URL =
   import.meta.env.VITE_BACKEND_URL || "https://hca-calc-engine.onrender.com";
@@ -19,6 +20,7 @@ const elements = {
   backendResult: document.querySelector("#backend-result"),
   activityLog: document.querySelector("#activity-log"),
   backendUrl: document.querySelector("#backend-url"),
+  userKey: document.querySelector("#user-key"),
   backendState: document.querySelector("#backend-state"),
   cloudDot: document.querySelector("#cloud-dot"),
 };
@@ -26,6 +28,7 @@ const elements = {
 Office.onReady((info) => {
   elements.backendUrl.value =
     localStorage.getItem("xf1.backendUrl") || DEFAULT_BACKEND_URL;
+  elements.userKey.value = localStorage.getItem("xf1.userKey") || "";
   elements.backendState.textContent = safeHost(elements.backendUrl.value);
   addLog("Task pane ready.");
 
@@ -46,6 +49,10 @@ Office.onReady((info) => {
     elements.backendState.textContent = value ? safeHost(value) : "Backend";
     checkBackendHealth();
   });
+  elements.userKey.addEventListener("change", () => {
+    localStorage.setItem("xf1.userKey", normalizeUserKey(elements.userKey.value));
+    elements.userKey.value = normalizeUserKey(elements.userKey.value);
+  });
 
   checkBackendHealth();
 });
@@ -65,6 +72,7 @@ async function handlePayrollRecalc() {
 
     const backendSummary = await sendLoadPreview(payload);
     await writePayrollOutputs(payload.output, backendSummary.outputs);
+    reportDetailSave(backendSummary.detailSave);
     setBackendUi("Success", "connected");
     elements.backendResult.textContent = backendSummary.status || "Success";
     elements.backendResult.className = "is-success";
@@ -124,6 +132,7 @@ async function buildPayrollPayload(startedAt) {
 
     return {
       section: "Payroll",
+      userKey: normalizeUserKey(elements.userKey.value),
       model: config.model,
       source: {
         sheet: config.payroll.dataLoadSheet,
@@ -185,6 +194,7 @@ function isIncluded(value) {
 
 async function sendLoadPreview(payload) {
   const baseUrl = elements.backendUrl.value.trim().replace(/\/$/, "");
+  localStorage.setItem("xf1.userKey", normalizeUserKey(payload.userKey));
   localStorage.setItem("xf1.backendUrl", baseUrl);
   elements.backendState.textContent = safeHost(baseUrl);
 
@@ -202,6 +212,26 @@ async function sendLoadPreview(payload) {
   }
 
   return response.json();
+}
+
+function reportDetailSave(detailSave) {
+  if (!detailSave) {
+    return;
+  }
+
+  if (detailSave.status === "saved") {
+    addLog(
+      `Saved ${Number(detailSave.rowsSaved || 0).toLocaleString()} detail rows for latest run.`
+    );
+    return;
+  }
+
+  if (detailSave.status === "skipped") {
+    addLog(`Detail storage skipped: ${detailSave.reason}.`);
+    return;
+  }
+
+  addLog(`Detail storage error: ${detailSave.reason || "unknown error"}.`);
 }
 
 async function clearOutputRange(outputConfig) {

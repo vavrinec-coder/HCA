@@ -7,6 +7,7 @@ from app.schemas import ModelConfig
 
 
 DEPARTMENT_FIELD_INDEX = 3
+EMPLOYEE_ID_FIELD_INDEX = 0
 START_DATE_FIELD_INDEX = 4
 END_DATE_FIELD_INDEX = 5
 FS_CATEGORY_FIELD_INDEX = 1
@@ -16,6 +17,18 @@ BONUS_PERCENT_FIELD_INDEX = 7
 BONUS_FIXED_FIELD_INDEX = 8
 FAR_FUTURE_DATE = date(2099, 12, 31)
 BONUS_PAYOUT_MONTHS = {2, 5, 8, 11}
+DETAIL_OUTPUT_KEYS = {
+    "headcount": "payroll.output.headcount",
+    "base_salary_total": "payroll.output.base_salary_total",
+    "base_salary_domestic": "payroll.output.base_salary_domestic",
+    "base_salary_international": "payroll.output.base_salary_international",
+    "base_salary_cogs": "payroll.output.base_salary_cogs",
+    "medical": "payroll.output.medical",
+    "retirement_401k": "payroll.output.401k",
+    "other_benefits": "payroll.output.other_benefits",
+    "bonus_accrual": "payroll.output.bonus_accrual",
+    "bonus_payout": "payroll.output.bonus_payout",
+}
 
 
 def calculate_payroll_outputs(
@@ -24,6 +37,7 @@ def calculate_payroll_outputs(
     model: ModelConfig,
     assumptions: dict[str, Any],
 ) -> dict[str, Any]:
+    employee_id_field = field_name(headers, EMPLOYEE_ID_FIELD_INDEX, "employee id")
     department_field = field_name(headers, DEPARTMENT_FIELD_INDEX, "department")
     start_date_field = field_name(headers, START_DATE_FIELD_INDEX, "start date")
     end_date_field = field_name(headers, END_DATE_FIELD_INDEX, "end date")
@@ -71,16 +85,18 @@ def calculate_payroll_outputs(
     bonus_payout_totals: dict[str, list[float]] = defaultdict(
         lambda: [0.0] * len(periods)
     )
+    detail_rows: list[dict[str, Any]] = []
     skipped_rows = 0
 
     for row in rows:
+        unit_id = normalize_text(row.get(employee_id_field))
         department = normalize_text(row.get(department_field))
         start_date = parse_date_value(row.get(start_date_field))
         raw_end_date = parse_date_value(row.get(end_date_field))
         end_date = raw_end_date or parse_iso_date(model.calculationEndDate)
         bonus_end_date = raw_end_date or FAR_FUTURE_DATE
 
-        if not department or start_date is None:
+        if not unit_id or not department or start_date is None:
             skipped_rows += 1
             continue
 
@@ -98,28 +114,30 @@ def calculate_payroll_outputs(
             fte = monthly_fte(start_date, end_date, month_start, month_end)
             annual_salary = parse_number(row.get(salary_fields[index]))
             monthly_salary = (annual_salary / 12) * fte
+            domestic_salary = monthly_salary if status == "domestic" else 0.0
+            international_salary = (
+                monthly_salary if status == "international" else 0.0
+            )
+            cogs_salary = monthly_salary if fs_category == "cos" else 0.0
             headcount_totals[department][index] += fte
             base_salary_totals[department][index] += monthly_salary
 
             if status == "domestic":
-                domestic_salary_totals[department][index] += monthly_salary
+                domestic_salary_totals[department][index] += domestic_salary
             elif status == "international":
-                international_salary_totals[department][index] += monthly_salary
+                international_salary_totals[department][index] += international_salary
 
             if fs_category == "cos":
-                cogs_salary_totals[department][index] += monthly_salary
+                cogs_salary_totals[department][index] += cogs_salary
 
             status_rates = benefit_rates.get(status, ZERO_BENEFIT_RATES)
             benefit_multiplier = 1.0 if fte > 0 else 0.0
-            medical_totals[department][index] += (
-                benefit_multiplier * status_rates["medical"]
-            )
-            retirement_401k_totals[department][index] += (
-                benefit_multiplier * status_rates["retirement401k"]
-            )
-            other_benefits_totals[department][index] += (
-                benefit_multiplier * status_rates["otherBenefits"]
-            )
+            medical = benefit_multiplier * status_rates["medical"]
+            retirement_401k = benefit_multiplier * status_rates["retirement401k"]
+            other_benefits = benefit_multiplier * status_rates["otherBenefits"]
+            medical_totals[department][index] += medical
+            retirement_401k_totals[department][index] += retirement_401k
+            other_benefits_totals[department][index] += other_benefits
 
             monthly_bonus_base = monthly_bonus_amount(
                 annual_salary,
@@ -134,12 +152,97 @@ def calculate_payroll_outputs(
             )
             employee_bonus_accruals[index] = employee_bonus_accrual
             bonus_accrual_totals[department][index] += employee_bonus_accrual
+            period_date = month_end.isoformat()
+            append_detail_row(
+                detail_rows,
+                unit_id,
+                department,
+                period_date,
+                DETAIL_OUTPUT_KEYS["headcount"],
+                fte,
+            )
+            append_detail_row(
+                detail_rows,
+                unit_id,
+                department,
+                period_date,
+                DETAIL_OUTPUT_KEYS["base_salary_total"],
+                monthly_salary,
+            )
+            append_detail_row(
+                detail_rows,
+                unit_id,
+                department,
+                period_date,
+                DETAIL_OUTPUT_KEYS["base_salary_domestic"],
+                domestic_salary,
+            )
+            append_detail_row(
+                detail_rows,
+                unit_id,
+                department,
+                period_date,
+                DETAIL_OUTPUT_KEYS["base_salary_international"],
+                international_salary,
+            )
+            append_detail_row(
+                detail_rows,
+                unit_id,
+                department,
+                period_date,
+                DETAIL_OUTPUT_KEYS["base_salary_cogs"],
+                cogs_salary,
+            )
+            append_detail_row(
+                detail_rows,
+                unit_id,
+                department,
+                period_date,
+                DETAIL_OUTPUT_KEYS["medical"],
+                medical,
+            )
+            append_detail_row(
+                detail_rows,
+                unit_id,
+                department,
+                period_date,
+                DETAIL_OUTPUT_KEYS["retirement_401k"],
+                retirement_401k,
+            )
+            append_detail_row(
+                detail_rows,
+                unit_id,
+                department,
+                period_date,
+                DETAIL_OUTPUT_KEYS["other_benefits"],
+                other_benefits,
+            )
+            append_detail_row(
+                detail_rows,
+                unit_id,
+                department,
+                period_date,
+                DETAIL_OUTPUT_KEYS["bonus_accrual"],
+                employee_bonus_accrual,
+            )
 
         for index, period in enumerate(periods):
             if is_bonus_payout_month(period["date"]):
-                bonus_payout_totals[department][index] += sum(
+                employee_bonus_payout = sum(
                     employee_bonus_accruals[max(0, index - 3) : index]
                 )
+                bonus_payout_totals[department][index] += employee_bonus_payout
+            else:
+                employee_bonus_payout = 0.0
+
+            append_detail_row(
+                detail_rows,
+                unit_id,
+                department,
+                period["date"].isoformat(),
+                DETAIL_OUTPUT_KEYS["bonus_payout"],
+                employee_bonus_payout,
+            )
 
     departments = sorted(headcount_totals)
     domestic_departments = sorted(domestic_salary_totals)
@@ -244,7 +347,27 @@ def calculate_payroll_outputs(
             "departments": bonus_payout_departments,
             "periods": serialize_periods(periods),
         },
+        "detailRows": detail_rows,
     }
+
+
+def append_detail_row(
+    detail_rows: list[dict[str, Any]],
+    unit_id: str,
+    department: str,
+    period_end_date: str,
+    output_key: str,
+    value: float,
+) -> None:
+    detail_rows.append(
+        {
+            "unit_id": unit_id,
+            "department": department,
+            "period_end_date": period_end_date,
+            "output_key": output_key,
+            "value": round(value, 6),
+        }
+    )
 
 
 def monthly_fte(

@@ -6,6 +6,8 @@ Heavy Calc Assist is an Excel Desktop Office.js add-in backed by a FastAPI calc 
 
 The current MVP reads Payroll input data from the workbook, sends included rows to the backend, calculates payroll outputs, and writes the results back to the workbook.
 
+If `DATABASE_URL` is configured on the backend, each Payroll Recalc also stores that user's latest employee/month/output detail rows in Postgres. The task pane `User ID` field supplies the MVP `user_key`.
+
 It does not yet attempt to replace the full payroll model. Current implemented outputs are:
 
 - Headcount / FTE
@@ -31,6 +33,12 @@ Backend:
 
 ```text
 https://hca-calc-engine.onrender.com
+```
+
+Optional backend environment variable for detail storage:
+
+```text
+DATABASE_URL=<Render Postgres internal database URL>
 ```
 
 Health check:
@@ -80,6 +88,7 @@ Backend:
 calc-engine/app/main.py
 calc-engine/app/schemas.py
 calc-engine/app/payroll_headcount.py
+calc-engine/app/detail_store.py
 ```
 
 Production manifest:
@@ -318,6 +327,35 @@ bonus payout = sum of available prior 3 forecast-month bonus accruals
 ```
 
 The engine does not backfill pre-forecast accruals. For example, if the forecast starts in April 2026, May 2026 payout includes April 2026 bonus accrual only.
+
+## Detail Storage
+
+Detail storage is latest-run-only by user. The backend creates tables automatically when `DATABASE_URL` is present:
+
+```text
+calc_runs
+calcs_detail_outputs
+```
+
+`calcs_detail_outputs` stores one row per employee, forecast month, and output key:
+
+```text
+user_key
+unit_id
+department
+period_end_date
+output_key
+value
+```
+
+Output keys are the Config keys, for example:
+
+```text
+payroll.output.base_salary_total
+payroll.output.bonus_payout
+```
+
+On every saved run, the backend deletes the previous run for the same `user_key` and bulk inserts the new detail rows. If `User ID` is blank, `DATABASE_URL` is missing, or the database save fails, Payroll Recalc still returns Excel outputs and reports the detail save status in the response.
 
 ## Development Workflow
 

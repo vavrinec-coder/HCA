@@ -4,6 +4,7 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.detail_store import save_latest_run
 from app.payroll_headcount import calculate_payroll_outputs
 from app.schemas import PayrollLoadPreviewRequest
 
@@ -38,9 +39,19 @@ def payroll_load_preview(payload: PayrollLoadPreviewRequest) -> dict[str, Any]:
     outputs = calculate_payroll_outputs(
         payload.headers, payload.rows, payload.model, payload.assumptions
     )
+    detail_rows = outputs.pop("detailRows", [])
+    try:
+        detail_save = save_latest_run(payload.userKey, payload, detail_rows)
+    except Exception as error:
+        detail_save = {
+            "status": "error",
+            "reason": str(error),
+            "rowsSaved": 0,
+        }
 
     return {
         "status": "received",
+        "detailSave": detail_save,
         "section": payload.section,
         "model": {
             "lastActualsDate": payload.model.lastActualsDate,

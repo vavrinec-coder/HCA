@@ -34,6 +34,7 @@ class ModelConfig(BaseModel):
 
 class PayrollLoadPreviewRequest(BaseModel):
     section: str
+    userKey: str | None = None
     model: ModelConfig
     source: PayrollSource
     assumptions: dict[str, Any]
