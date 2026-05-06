@@ -1,3 +1,4 @@
+import logging
 import os
 from time import perf_counter
 from typing import Any
@@ -7,7 +8,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.detail_store import load_detail_value, save_latest_run
 from app.payroll_headcount import calculate_payroll_outputs
-from app.schemas import PayrollLoadDetailRequest, PayrollLoadPreviewRequest
+from app.schemas import (
+    ClientLogRequest,
+    PayrollLoadDetailRequest,
+    PayrollLoadPreviewRequest,
+)
+
+
+logger = logging.getLogger("hca.client")
 
 
 def _cors_origins() -> list[str]:
@@ -94,6 +102,19 @@ def payroll_load_detail(payload: PayrollLoadDetailRequest) -> dict[str, Any]:
         payload.periodEndDate,
         payload.unitId,
     )
+
+
+@app.post("/debug/client-log")
+def debug_client_log(payload: ClientLogRequest) -> dict[str, str]:
+    logger.warning(
+        "client_log source=%s stage=%s level=%s message=%s context=%s",
+        payload.source,
+        payload.stage,
+        payload.level,
+        payload.message,
+        payload.context,
+    )
+    return {"status": "logged"}
 
 
 def elapsed_ms(started_at: float) -> float:

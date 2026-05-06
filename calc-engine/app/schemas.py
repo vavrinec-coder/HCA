@@ -49,3 +49,11 @@ class PayrollLoadDetailRequest(BaseModel):
     outputKey: str
     periodEndDate: str
     unitId: str
+
+
+class ClientLogRequest(BaseModel):
+    source: str
+    stage: str
+    level: str = "error"
+    message: str
+    context: dict[str, Any] = Field(default_factory=dict)

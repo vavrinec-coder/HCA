@@ -2,11 +2,17 @@ import os
 import unittest
 
 try:
-    from app.main import payroll_load_detail, payroll_load_preview
-    from app.schemas import PayrollLoadDetailRequest, PayrollLoadPreviewRequest
+    from app.main import debug_client_log, payroll_load_detail, payroll_load_preview
+    from app.schemas import (
+        ClientLogRequest,
+        PayrollLoadDetailRequest,
+        PayrollLoadPreviewRequest,
+    )
 except ModuleNotFoundError:
+    debug_client_log = None
     payroll_load_detail = None
     payroll_load_preview = None
+    ClientLogRequest = None
     PayrollLoadDetailRequest = None
     PayrollLoadPreviewRequest = None
 
@@ -107,6 +113,30 @@ class PayrollApiTests(unittest.TestCase):
         self.assertEqual(response["status"], "skipped")
         self.assertEqual(response["reason"], "database_not_configured")
         self.assertEqual(response["value"], 0)
+
+    def test_debug_client_log_records_client_error(self):
+        if debug_client_log is None:
+            self.skipTest("FastAPI test dependency is not installed.")
+
+        with self.assertLogs("hca.client", level="WARNING") as captured:
+            response = debug_client_log(
+                ClientLogRequest.model_validate(
+                    {
+                        "source": "HCA.LOAD_DETAIL",
+                        "stage": "backend-fetch",
+                        "level": "error",
+                        "message": "Failed to fetch",
+                        "context": {
+                            "outputKey": "payroll.output.401k",
+                            "periodEndDate": "2026-04-30",
+                            "unitId": "EX18",
+                        },
+                    }
+                )
+            )
+
+        self.assertEqual(response, {"status": "logged"})
+        self.assertIn("stage=backend-fetch", captured.output[0])
 
     @staticmethod
     def _restore_database_url(value):
