@@ -76,6 +76,21 @@
     return 123;
   }
 
+  async function diagBackend() {
+    const baseUrl =
+      (await readSharedSetting(backendUrlStorageKey)) || defaultBackendUrl;
+    return getBackendHealthStatus(baseUrl);
+  }
+
+  async function getBackendHealthStatus(baseUrl, fetchFn) {
+    try {
+      const response = await (fetchFn || fetch)(`${baseUrl.replace(/\/$/, "")}/health`);
+      return Number(response.status || 0);
+    } catch {
+      return -1;
+    }
+  }
+
   async function readSharedSetting(key) {
     if (root.OfficeRuntime && root.OfficeRuntime.storage) {
       const value = await root.OfficeRuntime.storage.getItem(key);
@@ -200,5 +215,6 @@
   if (root.CustomFunctions && root.CustomFunctions.associate) {
     root.CustomFunctions.associate("LOAD_DETAIL", loadDetail);
     root.CustomFunctions.associate("DIAG", diag);
+    root.CustomFunctions.associate("DIAG_BACKEND", diagBackend);
   }
 })();

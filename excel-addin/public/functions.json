@@ -11,6 +11,16 @@
       }
     },
     {
+      "id": "DIAG_BACKEND",
+      "name": "DIAG_BACKEND",
+      "description": "Temporary diagnostic function that verifies the Heavy Calc Assist custom-function runtime can reach the backend health endpoint.",
+      "parameters": [],
+      "result": {
+        "type": "number",
+        "dimensionality": "scalar"
+      }
+    },
+    {
       "id": "LOAD_DETAIL",
       "name": "LOAD_DETAIL",
       "description": "Loads a stored employee-level payroll output value for one output key, month, and unit ID.",

@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildClientLogContext,
   diag,
+  getBackendHealthStatus,
   normalizePeriodEndDate,
   parseLoadDetailValue,
 } from "./load-detail.js";
@@ -40,4 +41,21 @@ test("buildClientLogContext captures diagnostic fields without payroll values", 
 
 test("diag returns a plain value without backend access", () => {
   assert.equal(diag(), 123);
+});
+
+test("getBackendHealthStatus returns response status when backend is reachable", async () => {
+  const status = await getBackendHealthStatus("https://example.test", async (url) => {
+    assert.equal(url, "https://example.test/health");
+    return { status: 200 };
+  });
+
+  assert.equal(status, 200);
+});
+
+test("getBackendHealthStatus returns -1 when fetch fails", async () => {
+  const status = await getBackendHealthStatus("https://example.test", async () => {
+    throw new Error("Failed to fetch");
+  });
+
+  assert.equal(status, -1);
 });

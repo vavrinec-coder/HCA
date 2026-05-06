@@ -80,6 +80,21 @@ export function diag() {
   return 123;
 }
 
+export async function diagBackend() {
+  const baseUrl =
+    (await readSharedSetting(BACKEND_URL_STORAGE_KEY)) || DEFAULT_BACKEND_URL;
+  return getBackendHealthStatus(baseUrl);
+}
+
+export async function getBackendHealthStatus(baseUrl, fetchFn = fetch) {
+  try {
+    const response = await fetchFn(`${baseUrl.replace(/\/$/, "")}/health`);
+    return Number(response.status || 0);
+  } catch {
+    return -1;
+  }
+}
+
 export function normalizePeriodEndDate(value) {
   const date = parseInputDate(value);
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0))
@@ -193,4 +208,5 @@ function truncateDebugText(value) {
 if (globalThis.CustomFunctions?.associate) {
   globalThis.CustomFunctions.associate("LOAD_DETAIL", loadDetail);
   globalThis.CustomFunctions.associate("DIAG", diag);
+  globalThis.CustomFunctions.associate("DIAG_BACKEND", diagBackend);
 }
