@@ -1,4 +1,5 @@
 (function () {
+  const root = globalThis;
   const userKeyStorageKey = "xf1.userKey";
   const backendUrlStorageKey = "xf1.backendUrl";
   const defaultBackendUrl = "https://hca-calc-engine.onrender.com";
@@ -38,14 +39,14 @@
   }
 
   async function readSharedSetting(key) {
-    if (window.OfficeRuntime && window.OfficeRuntime.storage) {
-      const value = await window.OfficeRuntime.storage.getItem(key);
+    if (root.OfficeRuntime && root.OfficeRuntime.storage) {
+      const value = await root.OfficeRuntime.storage.getItem(key);
       if (value) {
         return value;
       }
     }
 
-    return window.localStorage ? window.localStorage.getItem(key) || "" : "";
+    return root.localStorage ? root.localStorage.getItem(key) || "" : "";
   }
 
   function normalizePeriodEndDate(value) {
@@ -81,9 +82,9 @@
   }
 
   function customFunctionError(message) {
-    if (window.CustomFunctions && window.CustomFunctions.Error) {
-      return new window.CustomFunctions.Error(
-        window.CustomFunctions.ErrorCode.invalidValue,
+    if (root.CustomFunctions && root.CustomFunctions.Error) {
+      return new root.CustomFunctions.Error(
+        root.CustomFunctions.ErrorCode.invalidValue,
         message
       );
     }
@@ -91,7 +92,7 @@
     throw new Error(message);
   }
 
-  if (window.CustomFunctions && window.CustomFunctions.associate) {
-    window.CustomFunctions.associate("LOAD_DETAIL", loadDetail);
+  if (root.CustomFunctions && root.CustomFunctions.associate) {
+    root.CustomFunctions.associate("LOAD_DETAIL", loadDetail);
   }
 })();

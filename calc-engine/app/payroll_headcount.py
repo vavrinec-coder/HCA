@@ -451,7 +451,7 @@ def is_enabled(value: Any) -> bool:
     if isinstance(value, (int, float)):
         return value == 1
 
-    return str(value or "").strip() == "1"
+    return str(value or "").strip().lower() in ("1", "true", "yes")
 
 
 def parse_number(value: Any) -> float:

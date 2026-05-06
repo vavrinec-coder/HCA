@@ -1,5 +1,10 @@
 import "./taskpane.css";
-import { getConfigNamedRange, getFilterOffset, parseConfig } from "./config.js";
+import {
+  getConfigNamedRange,
+  getFilterOffset,
+  isSelectedFlag,
+  parseConfig,
+} from "./config.js";
 import {
   BACKEND_URL_STORAGE_KEY,
   USER_KEY_STORAGE_KEY,
@@ -136,11 +141,12 @@ async function buildPayrollPayload(startedAt) {
       config.payroll.storeFilterColumn
     );
     const included = rows
-      .filter((row) => isIncluded(row[filterOffset]))
+      .filter((row) => isSelectedFlag(row[filterOffset]))
       .map((row) => ({
         ...rowToObject(headers, row),
-        __hcaStoreDetail: isIncluded(row[storeFilterOffset]),
+        __hcaStoreDetail: isSelectedFlag(row[storeFilterOffset]),
       }));
+    const storeRows = included.filter((row) => row.__hcaStoreDetail).length;
 
     const loadTimeMs = Math.round((performance.now() - startedAt) * 10) / 10;
 
@@ -167,6 +173,7 @@ async function buildPayrollPayload(startedAt) {
       metrics: {
         totalRows: rows.length,
         includedRows: included.length,
+        storeRows,
         loadTimeMs,
       },
       headers,
@@ -197,14 +204,6 @@ function rowToObject(headers, row) {
     record[header] = row[index] ?? null;
     return record;
   }, {});
-}
-
-function isIncluded(value) {
-  if (typeof value === "number") {
-    return value === 1;
-  }
-
-  return String(value ?? "").trim() === "1";
 }
 
 async function sendLoadPreview(payload) {
@@ -427,6 +426,11 @@ function updateMetrics(metrics) {
   elements.loadSpeed.textContent = `${rowsPerSecond.toLocaleString()} rows/sec - ${(
     metrics.loadTimeMs / 1000
   ).toFixed(2)}s`;
+  if (metrics.storeRows !== undefined) {
+    addLog(
+      `Detail storage selected for ${Number(metrics.storeRows).toLocaleString()} rows.`
+    );
+  }
 }
 
 function updateConfigUi(source, model) {

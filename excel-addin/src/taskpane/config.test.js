@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { getFilterOffset, parseConfig } from "./config.js";
+import { getFilterOffset, isSelectedFlag, parseConfig } from "./config.js";
 import { normalizeUserKey } from "./user.js";
 
 test("parseConfig reads the named-range config structure by key", () => {
@@ -81,4 +81,12 @@ test("normalizeUserKey keeps a stable lower-case user identifier", () => {
     normalizeUserKey(" Vavrinec@XF1Advisory.com "),
     "vavrinec@xf1advisory.com"
   );
+});
+
+test("isSelectedFlag accepts numeric, boolean, and text flags", () => {
+  assert.equal(isSelectedFlag(1), true);
+  assert.equal(isSelectedFlag(true), true);
+  assert.equal(isSelectedFlag("TRUE"), true);
+  assert.equal(isSelectedFlag("yes"), true);
+  assert.equal(isSelectedFlag(0), false);
 });

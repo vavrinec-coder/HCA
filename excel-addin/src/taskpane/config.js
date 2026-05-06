@@ -259,6 +259,19 @@ export function getFilterOffset(rangeAddress, filterColumn) {
   return offset;
 }
 
+export function isSelectedFlag(value) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    return value === 1;
+  }
+
+  const text = String(value ?? "").trim().toLowerCase();
+  return text === "1" || text === "true" || text === "yes";
+}
+
 function extractStartColumn(rangeAddress) {
   const cleaned = String(rangeAddress).split("!").pop().replace(/\$/g, "");
   const match = cleaned.match(/^([A-Z]+)(?:\d+)?/i);
