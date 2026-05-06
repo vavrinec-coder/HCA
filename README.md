@@ -231,6 +231,12 @@ After a saved recalc, users can load one stored employee/month/output value with
 
 The arguments are output key, any date in the forecast month, and employee ID. If no stored row exists, the function returns `0`.
 
+If Excel cannot read the task pane `User ID`, pass the user email as an optional fourth argument:
+
+```excel
+=HCA.LOAD_DETAIL("payroll.output.base_salary_total", C1, B10, "user@company.com")
+```
+
 The backend response includes separate timing fields for calculation and detail save time. The task pane writes those timings to the activity log after each recalc.
 
 After the add-in is hosted at a stable URL, restrict it to that origin:

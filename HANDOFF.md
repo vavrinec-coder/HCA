@@ -370,6 +370,12 @@ The Excel custom function is:
 
 Arguments are output key, any date in the target forecast month, and employee ID. The function normalizes the date to month-end and returns `0` when the selected detail row was not saved.
 
+An optional fourth argument can supply the User ID/email directly:
+
+```excel
+=HCA.LOAD_DETAIL("payroll.output.base_salary_total", C1, B10, "user@company.com")
+```
+
 The response includes timings for calculation, detail save, and total backend time. The task pane logs calculation and detail save timing after each recalc.
 
 ## Development Workflow

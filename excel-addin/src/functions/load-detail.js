@@ -8,8 +8,10 @@ import {
 const DEFAULT_BACKEND_URL =
   import.meta.env?.VITE_BACKEND_URL || "https://hca-calc-engine.onrender.com";
 
-export async function loadDetail(outputKey, period, unitId) {
-  const userKey = normalizeUserKey(await readSharedSetting(USER_KEY_STORAGE_KEY));
+export async function loadDetail(outputKey, period, unitId, userKeyOverride = "") {
+  const userKey = normalizeUserKey(
+    userKeyOverride || (await readSharedSetting(USER_KEY_STORAGE_KEY))
+  );
   if (!userKey) {
     return customFunctionError(
       "Set User ID in the Heavy Calc Assist task pane, then run Payroll Recalc."

@@ -4,8 +4,10 @@
   const backendUrlStorageKey = "xf1.backendUrl";
   const defaultBackendUrl = "https://hca-calc-engine.onrender.com";
 
-  async function loadDetail(outputKey, period, unitId) {
-    const userKey = normalizeUserKey(await readSharedSetting(userKeyStorageKey));
+  async function loadDetail(outputKey, period, unitId, userKeyOverride) {
+    const userKey = normalizeUserKey(
+      userKeyOverride || (await readSharedSetting(userKeyStorageKey))
+    );
     if (!userKey) {
       return customFunctionError(
         "Set User ID in the Heavy Calc Assist task pane, then run Payroll Recalc."

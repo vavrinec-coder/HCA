@@ -22,6 +22,13 @@
           "description": "Employee ID from PayrollData.",
           "type": "string",
           "dimensionality": "scalar"
+        },
+        {
+          "name": "user_key",
+          "description": "Optional User ID/email. If omitted, the function uses the User ID from the Heavy Calc Assist task pane.",
+          "type": "string",
+          "dimensionality": "scalar",
+          "optional": true
         }
       ],
       "result": {
