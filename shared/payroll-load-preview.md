@@ -95,7 +95,13 @@ The response includes detail save status:
   "detailSave": {
     "status": "saved",
     "runId": "example-run-id",
-    "rowsSaved": 283750
+    "rowsPrepared": 283750,
+    "rowsSaved": 145000
+  },
+  "timings": {
+    "calculationMs": 850,
+    "detailSaveMs": 2100,
+    "totalBackendMs": 2950
   }
 }
 ```
@@ -107,7 +113,10 @@ If detail storage is not available, Payroll output still succeeds and the respon
   "detailSave": {
     "status": "skipped",
     "reason": "database_not_configured",
+    "rowsPrepared": 283750,
     "rowsSaved": 0
   }
 }
 ```
+
+Zero-value detail rows are not saved to Postgres. Excel output tables still receive the full output shape from the backend.

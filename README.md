@@ -217,6 +217,10 @@ calcs_detail_outputs
 
 Only the latest run per `User ID` is retained. Each new saved run deletes that user's prior saved run and bulk inserts the new detail rows.
 
+Zero-value detail rows are not saved. Department-level Excel output tables still include zero values where needed.
+
+The backend response includes separate timing fields for calculation and detail save time. The task pane writes those timings to the activity log after each recalc.
+
 After the add-in is hosted at a stable URL, restrict it to that origin:
 
 ```text

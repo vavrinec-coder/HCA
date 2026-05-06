@@ -1,4 +1,5 @@
 import os
+from time import perf_counter
 from typing import Any
 
 from fastapi import FastAPI
@@ -35,23 +36,34 @@ def health() -> dict[str, str]:
 
 @app.post("/payroll/load-preview")
 def payroll_load_preview(payload: PayrollLoadPreviewRequest) -> dict[str, Any]:
+    backend_started_at = perf_counter()
     sample_keys = list(payload.rows[0].keys()) if payload.rows else []
+    calculation_started_at = perf_counter()
     outputs = calculate_payroll_outputs(
         payload.headers, payload.rows, payload.model, payload.assumptions
     )
+    calculation_ms = elapsed_ms(calculation_started_at)
     detail_rows = outputs.pop("detailRows", [])
+    detail_save_started_at = perf_counter()
     try:
         detail_save = save_latest_run(payload.userKey, payload, detail_rows)
     except Exception as error:
         detail_save = {
             "status": "error",
             "reason": str(error),
+            "rowsPrepared": len(detail_rows),
             "rowsSaved": 0,
         }
+    detail_save_ms = elapsed_ms(detail_save_started_at)
 
     return {
         "status": "received",
         "detailSave": detail_save,
+        "timings": {
+            "calculationMs": calculation_ms,
+            "detailSaveMs": detail_save_ms,
+            "totalBackendMs": elapsed_ms(backend_started_at),
+        },
         "section": payload.section,
         "model": {
             "lastActualsDate": payload.model.lastActualsDate,
@@ -72,3 +84,7 @@ def payroll_load_preview(payload: PayrollLoadPreviewRequest) -> dict[str, Any]:
         "sampleKeys": sample_keys[:10],
         "outputs": outputs,
     }
+
+
+def elapsed_ms(started_at: float) -> float:
+    return round((perf_counter() - started_at) * 1000, 2)

@@ -355,7 +355,9 @@ payroll.output.base_salary_total
 payroll.output.bonus_payout
 ```
 
-On every saved run, the backend deletes the previous run for the same `user_key` and bulk inserts the new detail rows. If `User ID` is blank, `DATABASE_URL` is missing, or the database save fails, Payroll Recalc still returns Excel outputs and reports the detail save status in the response.
+On every saved run, the backend deletes the previous run for the same `user_key` and bulk inserts the new detail rows. Zero-value detail rows are filtered out before saving. If `User ID` is blank, `DATABASE_URL` is missing, or the database save fails, Payroll Recalc still returns Excel outputs and reports the detail save status in the response.
+
+The response includes timings for calculation, detail save, and total backend time. The task pane logs calculation and detail save timing after each recalc.
 
 ## Development Workflow
 

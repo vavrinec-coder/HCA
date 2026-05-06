@@ -1,6 +1,6 @@
 import unittest
 
-from app.detail_store import build_detail_records
+from app.detail_store import build_detail_records, nonzero_detail_rows
 
 
 class DetailStoreTests(unittest.TestCase):
@@ -29,6 +29,37 @@ class DetailStoreTests(unittest.TestCase):
                     "payroll.output.bonus_payout",
                     1100,
                 )
+            ],
+        )
+
+    def test_nonzero_detail_rows_removes_zero_values(self):
+        rows = [
+            {
+                "unit_id": "E1",
+                "department": "Sales",
+                "period_end_date": "2026-05-31",
+                "output_key": "payroll.output.bonus_payout",
+                "value": 0,
+            },
+            {
+                "unit_id": "E1",
+                "department": "Sales",
+                "period_end_date": "2026-05-31",
+                "output_key": "payroll.output.base_salary_total",
+                "value": 10000,
+            },
+        ]
+
+        self.assertEqual(
+            nonzero_detail_rows(rows),
+            [
+                {
+                    "unit_id": "E1",
+                    "department": "Sales",
+                    "period_end_date": "2026-05-31",
+                    "output_key": "payroll.output.base_salary_total",
+                    "value": 10000,
+                }
             ],
         )
 

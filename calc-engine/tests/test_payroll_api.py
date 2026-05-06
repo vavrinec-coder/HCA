@@ -79,6 +79,9 @@ class PayrollApiTests(unittest.TestCase):
 
         self.assertEqual(response["detailSave"]["status"], "skipped")
         self.assertEqual(response["detailSave"]["reason"], "database_not_configured")
+        self.assertGreaterEqual(response["timings"]["calculationMs"], 0)
+        self.assertGreaterEqual(response["timings"]["detailSaveMs"], 0)
+        self.assertGreaterEqual(response["timings"]["totalBackendMs"], 0)
         self.assertNotIn("detailRows", response["outputs"])
 
     @staticmethod

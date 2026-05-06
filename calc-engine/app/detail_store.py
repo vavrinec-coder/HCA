@@ -46,15 +46,22 @@ def save_latest_run(
     detail_rows: list[dict[str, Any]],
     database_url: str | None = None,
 ) -> dict[str, Any]:
+    detail_rows_to_save = nonzero_detail_rows(detail_rows)
     clean_user_key = normalize_user_key(user_key)
     if not clean_user_key:
-        return {"status": "skipped", "reason": "missing_user_key", "rowsSaved": 0}
+        return {
+            "status": "skipped",
+            "reason": "missing_user_key",
+            "rowsPrepared": len(detail_rows),
+            "rowsSaved": 0,
+        }
 
     database_url = database_url or os.getenv("DATABASE_URL")
     if not database_url:
         return {
             "status": "skipped",
             "reason": "database_not_configured",
+            "rowsPrepared": len(detail_rows),
             "rowsSaved": 0,
         }
 
@@ -62,6 +69,7 @@ def save_latest_run(
         return {
             "status": "skipped",
             "reason": "database_driver_not_installed",
+            "rowsPrepared": len(detail_rows),
             "rowsSaved": 0,
         }
 
@@ -98,7 +106,7 @@ def save_latest_run(
                     "latest",
                 ),
             )
-            if detail_rows:
+            if detail_rows_to_save:
                 with connection.cursor().copy(
                     """
                     COPY calcs_detail_outputs (
@@ -116,11 +124,20 @@ def save_latest_run(
                     for record in iter_detail_records(
                         run_id,
                         clean_user_key,
-                        detail_rows,
+                        detail_rows_to_save,
                     ):
                         copy.write_row(record)
 
-    return {"status": "saved", "runId": run_id, "rowsSaved": len(detail_rows)}
+    return {
+        "status": "saved",
+        "runId": run_id,
+        "rowsPrepared": len(detail_rows),
+        "rowsSaved": len(detail_rows_to_save),
+    }
+
+
+def nonzero_detail_rows(detail_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [row for row in detail_rows if float(row.get("value") or 0) != 0.0]
 
 
 def build_detail_records(

@@ -72,6 +72,7 @@ async function handlePayrollRecalc() {
 
     const backendSummary = await sendLoadPreview(payload);
     await writePayrollOutputs(payload.output, backendSummary.outputs);
+    reportBackendTimings(backendSummary.timings);
     reportDetailSave(backendSummary.detailSave);
     setBackendUi("Success", "connected");
     elements.backendResult.textContent = backendSummary.status || "Success";
@@ -232,6 +233,26 @@ function reportDetailSave(detailSave) {
   }
 
   addLog(`Detail storage error: ${detailSave.reason || "unknown error"}.`);
+}
+
+function reportBackendTimings(timings) {
+  if (!timings) {
+    return;
+  }
+
+  addLog(
+    `Backend timing: calc ${formatMs(timings.calculationMs)}, detail save ${formatMs(
+      timings.detailSaveMs
+    )}.`
+  );
+}
+
+function formatMs(value) {
+  const milliseconds = Number(value || 0);
+  if (milliseconds >= 1000) {
+    return `${(milliseconds / 1000).toFixed(2)}s`;
+  }
+  return `${Math.round(milliseconds)}ms`;
 }
 
 async function clearOutputRange(outputConfig) {
