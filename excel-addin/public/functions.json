@@ -1,6 +1,16 @@
 {
   "functions": [
     {
+      "id": "DIAG",
+      "name": "DIAG",
+      "description": "Temporary diagnostic function that verifies the Heavy Calc Assist custom-function runtime can execute JavaScript.",
+      "parameters": [],
+      "result": {
+        "type": "number",
+        "dimensionality": "scalar"
+      }
+    },
+    {
       "id": "LOAD_DETAIL",
       "name": "LOAD_DETAIL",
       "description": "Loads a stored employee-level payroll output value for one output key, month, and unit ID.",

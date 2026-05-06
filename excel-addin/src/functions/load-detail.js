@@ -76,6 +76,10 @@ export async function loadDetail(outputKey, period, unitId, userKeyOverride = ""
   }
 }
 
+export function diag() {
+  return 123;
+}
+
 export function normalizePeriodEndDate(value) {
   const date = parseInputDate(value);
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0))
@@ -188,4 +192,5 @@ function truncateDebugText(value) {
 
 if (globalThis.CustomFunctions?.associate) {
   globalThis.CustomFunctions.associate("LOAD_DETAIL", loadDetail);
+  globalThis.CustomFunctions.associate("DIAG", diag);
 }

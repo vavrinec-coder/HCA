@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildClientLogContext,
+  diag,
   normalizePeriodEndDate,
   parseLoadDetailValue,
 } from "./load-detail.js";
@@ -35,4 +36,8 @@ test("buildClientLogContext captures diagnostic fields without payroll values", 
       userKeyOverrideProvided: true,
     }
   );
+});
+
+test("diag returns a plain value without backend access", () => {
+  assert.equal(diag(), 123);
 });

@@ -72,6 +72,10 @@
     }
   }
 
+  function diag() {
+    return 123;
+  }
+
   async function readSharedSetting(key) {
     if (root.OfficeRuntime && root.OfficeRuntime.storage) {
       const value = await root.OfficeRuntime.storage.getItem(key);
@@ -195,5 +199,6 @@
 
   if (root.CustomFunctions && root.CustomFunctions.associate) {
     root.CustomFunctions.associate("LOAD_DETAIL", loadDetail);
+    root.CustomFunctions.associate("DIAG", diag);
   }
 })();
