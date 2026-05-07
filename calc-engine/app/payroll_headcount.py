@@ -142,7 +142,7 @@ def calculate_payroll_outputs(
             other_benefits_totals[department][index] += other_benefits
 
             monthly_bonus_base = monthly_bonus_amount(
-                annual_salary,
+                monthly_salary,
                 bonus_percent,
                 bonus_fixed_amount,
             )
@@ -504,14 +504,14 @@ def parse_benefit_rates(assumptions: dict[str, Any]) -> dict[str, dict[str, floa
 
 
 def monthly_bonus_amount(
-    annual_salary: float,
+    monthly_salary: float,
     bonus_percent: float,
     bonus_fixed_amount: float,
 ) -> float:
     if bonus_fixed_amount > 0:
         return bonus_fixed_amount / 12
 
-    return (annual_salary / 12) * bonus_percent
+    return monthly_salary * bonus_percent
 
 
 def bonus_plan_multiplier(

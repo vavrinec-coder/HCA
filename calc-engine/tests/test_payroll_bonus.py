@@ -77,6 +77,34 @@ class PayrollBonusAccrualTests(unittest.TestCase):
                 "2026": 90000,
                 "2027": 90000,
             },
+            {
+                "EmployeeID": "E4",
+                "__hcaStoreDetail": True,
+                "FS_Category": "OpEx",
+                "Status": "Domestic",
+                "Department": "Sales",
+                "Start Date": "2026-04-16",
+                "Termination Date": "2099-12-31",
+                "Bonus Plan": "Customer Success Plan",
+                "Bonus %": 0.10,
+                "Bonus $": 0,
+                "2026": 120000,
+                "2027": 120000,
+            },
+            {
+                "EmployeeID": "E5",
+                "__hcaStoreDetail": True,
+                "FS_Category": "OpEx",
+                "Status": "Domestic",
+                "Department": "Sales",
+                "Start Date": "2026-04-16",
+                "Termination Date": "2099-12-31",
+                "Bonus Plan": "MBO Plan - Fixed Bonus",
+                "Bonus %": 0,
+                "Bonus $": 12000,
+                "2026": 120000,
+                "2027": 120000,
+            },
         ]
         assumptions = {
             "bonus": {
@@ -101,7 +129,7 @@ class PayrollBonusAccrualTests(unittest.TestCase):
             [
                 ["Department", "Apr 2026", "May 2026", "Jun 2026"],
                 ["G&A", 0, 0, 0],
-                ["Sales", 2100, 1100, 1100],
+                ["Sales", 3600, 3100, 3100],
             ],
         )
         self.assertEqual(
@@ -109,7 +137,7 @@ class PayrollBonusAccrualTests(unittest.TestCase):
             [
                 ["Department", "Apr 2026", "May 2026", "Jun 2026"],
                 ["G&A", 0, 0, 0],
-                ["Sales", 0, 2100, 0],
+                ["Sales", 0, 3600, 0],
             ],
         )
         self.assertIn(
@@ -119,6 +147,26 @@ class PayrollBonusAccrualTests(unittest.TestCase):
                 "period_end_date": "2026-05-31",
                 "output_key": "payroll.output.bonus_payout",
                 "value": 1100,
+            },
+            outputs["detailRows"],
+        )
+        self.assertIn(
+            {
+                "unit_id": "E4",
+                "department": "Sales",
+                "period_end_date": "2026-04-30",
+                "output_key": "payroll.output.bonus_accrual",
+                "value": 500,
+            },
+            outputs["detailRows"],
+        )
+        self.assertIn(
+            {
+                "unit_id": "E5",
+                "department": "Sales",
+                "period_end_date": "2026-04-30",
+                "output_key": "payroll.output.bonus_accrual",
+                "value": 1000,
             },
             outputs["detailRows"],
         )
