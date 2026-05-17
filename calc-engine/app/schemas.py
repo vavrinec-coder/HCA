@@ -51,6 +51,24 @@ class PayrollLoadDetailRequest(BaseModel):
     unitId: str
 
 
+class PayrollLoadDetailBatchItem(BaseModel):
+    outputKey: str
+    periodEndDate: str
+    unitId: str
+
+
+class PayrollLoadDetailBatchRequest(BaseModel):
+    userKey: str | None = None
+    items: list[PayrollLoadDetailBatchItem] = Field(min_length=1, max_length=1000)
+
+
+class PayrollLoadDetailBatchResponse(BaseModel):
+    status: str
+    values: list[float]
+    foundCount: int = 0
+    reason: str | None = None
+
+
 class ClientLogRequest(BaseModel):
     source: str
     stage: str

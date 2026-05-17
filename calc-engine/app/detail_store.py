@@ -1,3 +1,4 @@
+import json
 import os
 from contextlib import contextmanager
 from typing import Any
@@ -256,6 +257,99 @@ def load_detail_value(
         return {"status": "not_found", "value": 0}
 
     return {"status": "found", "value": float(row[0])}
+
+
+def load_detail_values(
+    user_key: str | None,
+    items: list[Any],
+    database_url: str | None = None,
+) -> dict[str, Any]:
+    clean_user_key = normalize_user_key(user_key)
+    database_url = get_database_url(database_url)
+
+    unavailable_reason = detail_store_unavailable_reason(clean_user_key, database_url)
+    if unavailable_reason is not None:
+        return {
+            "status": "skipped",
+            "reason": unavailable_reason,
+            "values": [0.0] * len(items),
+            "foundCount": 0,
+        }
+
+    normalized_items = [normalize_detail_item(item) for item in items]
+    values = [0.0] * len(normalized_items)
+
+    if not normalized_items:
+        return {"status": "ok", "values": [], "foundCount": 0}
+
+    payload_json = json.dumps(
+        [
+            {
+                "ord": index,
+                "output_key": item["output_key"],
+                "period_end_date": item["period_end_date"],
+                "unit_id": item["unit_id"],
+            }
+            for index, item in enumerate(normalized_items)
+        ]
+    )
+
+    with detail_connection(database_url) as connection:
+        rows = connection.execute(
+            """
+            WITH input AS (
+                SELECT *
+                FROM jsonb_to_recordset(%s::jsonb)
+                AS x(
+                    ord integer,
+                    output_key text,
+                    period_end_date date,
+                    unit_id text
+                )
+            )
+            SELECT input.ord, detail.value
+            FROM input
+            LEFT JOIN calcs_detail_outputs AS detail
+              ON detail.user_key = %s
+             AND detail.output_key = input.output_key
+             AND detail.period_end_date = input.period_end_date
+             AND detail.unit_id = input.unit_id
+            ORDER BY input.ord
+            """,
+            (payload_json, clean_user_key),
+        ).fetchall()
+
+    found_count = 0
+    for ordinal, value in rows:
+        if value is not None:
+            values[int(ordinal)] = float(value)
+            found_count += 1
+
+    return {
+        "status": "ok",
+        "values": values,
+        "foundCount": found_count,
+    }
+
+
+def read_item_value(item: Any, attr_name: str, key_name: str) -> Any:
+    if hasattr(item, attr_name):
+        return getattr(item, attr_name)
+    if isinstance(item, dict):
+        return item.get(key_name)
+    return None
+
+
+def normalize_detail_item(item: Any) -> dict[str, str]:
+    return {
+        "output_key": str(
+            read_item_value(item, "outputKey", "outputKey") or ""
+        ).strip(),
+        "period_end_date": str(
+            read_item_value(item, "periodEndDate", "periodEndDate") or ""
+        ).strip(),
+        "unit_id": str(read_item_value(item, "unitId", "unitId") or "").strip(),
+    }
 
 
 def nonzero_detail_rows(detail_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

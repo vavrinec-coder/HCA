@@ -6,7 +6,9 @@ from app.detail_store import (
     close_detail_store,
     initialize_detail_store,
     load_detail_value,
+    load_detail_values,
     nonzero_detail_rows,
+    normalize_detail_item,
     save_latest_run,
 )
 
@@ -116,6 +118,64 @@ class DetailStoreTests(unittest.TestCase):
         self.assertEqual(result["reason"], "database_not_configured")
         self.assertEqual(result["rowsPrepared"], 0)
         self.assertEqual(result["rowsSaved"], 0)
+
+    def test_load_detail_values_returns_zeros_when_database_is_not_configured(self):
+        with patch.dict("os.environ", {}, clear=True):
+            result = load_detail_values(
+                "user@example.com",
+                [
+                    {
+                        "outputKey": "payroll.output.base_salary_total",
+                        "periodEndDate": "2026-05-31",
+                        "unitId": "E1",
+                    },
+                    {
+                        "outputKey": "payroll.output.401k",
+                        "periodEndDate": "2026-05-31",
+                        "unitId": "E1",
+                    },
+                ],
+                database_url=None,
+            )
+
+        self.assertEqual(result["status"], "skipped")
+        self.assertEqual(result["reason"], "database_not_configured")
+        self.assertEqual(result["values"], [0.0, 0.0])
+        self.assertEqual(result["foundCount"], 0)
+
+    def test_load_detail_values_returns_zeros_when_user_key_missing(self):
+        result = load_detail_values(
+            "",
+            [
+                {
+                    "outputKey": "payroll.output.base_salary_total",
+                    "periodEndDate": "2026-05-31",
+                    "unitId": "E1",
+                }
+            ],
+            database_url="postgresql://example",
+        )
+
+        self.assertEqual(result["status"], "skipped")
+        self.assertEqual(result["reason"], "missing_user_key")
+        self.assertEqual(result["values"], [0.0])
+        self.assertEqual(result["foundCount"], 0)
+
+    def test_normalize_detail_item_handles_dict(self):
+        self.assertEqual(
+            normalize_detail_item(
+                {
+                    "outputKey": " payroll.output.401k ",
+                    "periodEndDate": " 2026-05-31 ",
+                    "unitId": " E1 ",
+                }
+            ),
+            {
+                "output_key": "payroll.output.401k",
+                "period_end_date": "2026-05-31",
+                "unit_id": "E1",
+            },
+        )
 
 
 if __name__ == "__main__":

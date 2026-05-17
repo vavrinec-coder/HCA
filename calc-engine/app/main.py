@@ -11,11 +11,13 @@ from app.detail_store import (
     close_detail_store,
     initialize_detail_store,
     load_detail_value,
+    load_detail_values,
     save_latest_run,
 )
 from app.payroll_headcount import calculate_payroll_outputs
 from app.schemas import (
     ClientLogRequest,
+    PayrollLoadDetailBatchRequest,
     PayrollLoadDetailRequest,
     PayrollLoadPreviewRequest,
 )
@@ -133,6 +135,27 @@ def payroll_load_detail_get(
     unitId: str,
 ) -> dict[str, Any]:
     return load_detail_value(userKey, outputKey, periodEndDate, unitId)
+
+
+@app.post("/payroll/load-detail-batch")
+def payroll_load_detail_batch(
+    payload: PayrollLoadDetailBatchRequest,
+) -> dict[str, Any]:
+    started_at = perf_counter()
+    result = load_detail_values(payload.userKey, payload.items)
+    timings = {
+        "totalBackendMs": elapsed_ms(started_at),
+        "itemCount": len(payload.items),
+    }
+    result["timings"] = timings
+    logger.warning(
+        "load_detail_batch status=%s items=%s found=%s total_ms=%s",
+        result.get("status"),
+        len(payload.items),
+        result.get("foundCount"),
+        timings["totalBackendMs"],
+    )
+    return result
 
 
 @app.post("/debug/client-log")

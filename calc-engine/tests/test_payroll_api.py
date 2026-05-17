@@ -4,21 +4,25 @@ import unittest
 try:
     from app.main import (
         debug_client_log,
+        payroll_load_detail_batch,
         payroll_load_detail,
         payroll_load_detail_get,
         payroll_load_preview,
     )
     from app.schemas import (
         ClientLogRequest,
+        PayrollLoadDetailBatchRequest,
         PayrollLoadDetailRequest,
         PayrollLoadPreviewRequest,
     )
 except ModuleNotFoundError:
     debug_client_log = None
+    payroll_load_detail_batch = None
     payroll_load_detail = None
     payroll_load_detail_get = None
     payroll_load_preview = None
     ClientLogRequest = None
+    PayrollLoadDetailBatchRequest = None
     PayrollLoadDetailRequest = None
     PayrollLoadPreviewRequest = None
 
@@ -137,6 +141,59 @@ class PayrollApiTests(unittest.TestCase):
         self.assertEqual(response["status"], "skipped")
         self.assertEqual(response["reason"], "database_not_configured")
         self.assertEqual(response["value"], 0)
+
+    def test_load_detail_batch_returns_zeros_when_database_is_not_configured(self):
+        if payroll_load_detail_batch is None:
+            self.skipTest("FastAPI test dependency is not installed.")
+
+        previous_database_url = os.environ.pop("DATABASE_URL", None)
+        self.addCleanup(self._restore_database_url, previous_database_url)
+
+        response = payroll_load_detail_batch(
+            PayrollLoadDetailBatchRequest.model_validate(
+                {
+                    "userKey": "user@example.com",
+                    "items": [
+                        {
+                            "outputKey": "payroll.output.base_salary_total",
+                            "periodEndDate": "2026-05-31",
+                            "unitId": "E1",
+                        },
+                        {
+                            "outputKey": "payroll.output.401k",
+                            "periodEndDate": "2026-05-31",
+                            "unitId": "E1",
+                        },
+                    ],
+                }
+            )
+        )
+
+        self.assertEqual(response["status"], "skipped")
+        self.assertEqual(response["reason"], "database_not_configured")
+        self.assertEqual(response["values"], [0.0, 0.0])
+        self.assertEqual(response["foundCount"], 0)
+        self.assertEqual(response["timings"]["itemCount"], 2)
+        self.assertGreaterEqual(response["timings"]["totalBackendMs"], 0)
+
+    def test_load_detail_batch_rejects_more_than_1000_items(self):
+        if PayrollLoadDetailBatchRequest is None:
+            self.skipTest("FastAPI test dependency is not installed.")
+
+        with self.assertRaises(ValueError):
+            PayrollLoadDetailBatchRequest.model_validate(
+                {
+                    "userKey": "user@example.com",
+                    "items": [
+                        {
+                            "outputKey": "payroll.output.base_salary_total",
+                            "periodEndDate": "2026-05-31",
+                            "unitId": f"E{index}",
+                        }
+                        for index in range(1001)
+                    ],
+                }
+            )
 
     def test_debug_client_log_records_client_error(self):
         if debug_client_log is None:
