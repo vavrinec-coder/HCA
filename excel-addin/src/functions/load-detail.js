@@ -5,8 +5,7 @@ import {
   readSharedSetting,
 } from "../taskpane/user.js";
 
-const DEFAULT_BACKEND_URL =
-  import.meta.env?.VITE_BACKEND_URL || "https://hca-calc-engine.onrender.com";
+const DEFAULT_BACKEND_URL = "https://hca-calc-engine.onrender.com";
 const LOAD_DETAIL_BATCH_DELAY_MS = 50;
 const LOAD_DETAIL_BATCH_MAX_SIZE = 500;
 const SETTINGS_CACHE_TTL_MS = 1000;
@@ -51,47 +50,14 @@ export async function loadDetail(outputKey, period, unitId, userKeyOverride = ""
     context.periodEndDate = requestBody.periodEndDate;
     context.unitId = requestBody.unitId;
 
-    stage = "backend-batch";
-    return await queueLoadDetailLookup(baseUrl, userKey, {
-      outputKey: requestBody.outputKey,
-      periodEndDate: requestBody.periodEndDate,
-      unitId: requestBody.unitId,
-    });
+    stage = "backend-single";
+    return await sendLoadDetailSingle(baseUrl, requestBody);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await reportClientError(baseUrl, stage, message, context);
     return customFunctionError(
       `LOAD_DETAIL failed at ${stage}. Check Render logs for details.`
     );
-  }
-}
-
-export function diag() {
-  return 123;
-}
-
-export async function diagBackend() {
-  const baseUrl =
-    (await readSharedSetting(BACKEND_URL_STORAGE_KEY)) || DEFAULT_BACKEND_URL;
-  return getBackendHealthStatus(baseUrl);
-}
-
-export async function diagLoadDetail(fetchFn = fetch) {
-  try {
-    const response = await fetchFn(
-      buildLoadDetailUrl(DEFAULT_BACKEND_URL, {
-        userKey: "vavrinec@xf1advisory.com",
-        outputKey: "payroll.output.401k",
-        periodEndDate: "2026-04-30",
-        unitId: "EX18",
-      })
-    );
-    if (!response.ok) {
-      return -Number(response.status || 1);
-    }
-    return parseLoadDetailValue(await response.json());
-  } catch {
-    return -1;
   }
 }
 
@@ -186,6 +152,17 @@ export function normalizePeriodEndDate(value) {
 
 export function parseLoadDetailValue(responseBody) {
   return Number(responseBody?.value || 0);
+}
+
+async function sendLoadDetailSingle(baseUrl, requestBody, fetchFn = fetch) {
+  const response = await fetchFn(buildLoadDetailUrl(baseUrl, requestBody));
+
+  if (!response.ok) {
+    const responseText = await readResponseText(response);
+    throw new Error(`LOAD_DETAIL backend error: ${response.status} ${responseText}`);
+  }
+
+  return parseLoadDetailValue(await response.json());
 }
 
 async function readLoadDetailSettings() {
@@ -398,11 +375,4 @@ function safeDebugValue(value) {
 function truncateDebugText(value) {
   const text = String(value ?? "");
   return text.length > 500 ? `${text.slice(0, 500)}...` : text;
-}
-
-if (globalThis.CustomFunctions?.associate) {
-  globalThis.CustomFunctions.associate("LOAD_DETAIL", loadDetail);
-  globalThis.CustomFunctions.associate("DIAG", diag);
-  globalThis.CustomFunctions.associate("DIAG_BACKEND", diagBackend);
-  globalThis.CustomFunctions.associate("DIAG_LOAD_DETAIL", diagLoadDetail);
 }

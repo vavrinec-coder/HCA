@@ -85,6 +85,7 @@ async function handlePayrollRecalc() {
     await writePayrollOutputs(payload.output, backendSummary.outputs);
     reportBackendTimings(backendSummary.timings);
     reportDetailSave(backendSummary.detailSave);
+    await recalculateWorkbookAfterDetailSave(backendSummary.detailSave);
     setBackendUi("Success", "connected");
     elements.backendResult.textContent = backendSummary.status || "Success";
     elements.backendResult.className = "is-success";
@@ -266,6 +267,21 @@ function formatMs(value) {
     return `${(milliseconds / 1000).toFixed(2)}s`;
   }
   return `${Math.round(milliseconds)}ms`;
+}
+
+async function recalculateWorkbookAfterDetailSave(detailSave) {
+  if (detailSave?.status !== "saved") {
+    addLog("LOAD_DETAIL refresh skipped because detail rows were not saved.");
+    return;
+  }
+
+  await Excel.run(async (context) => {
+    const calculationType = globalThis.Excel?.CalculationType?.full || "Full";
+    context.workbook.application.calculate(calculationType);
+    await context.sync();
+  });
+
+  addLog("LOAD_DETAIL formulas refreshed.");
 }
 
 async function clearOutputRange(outputConfig) {

@@ -5,8 +5,6 @@ import {
   buildClientLogContext,
   buildLoadDetailUrl,
   buildLoadDetailLookupKey,
-  diag,
-  diagLoadDetail,
   getBackendHealthStatus,
   loadDetail,
   normalizePeriodEndDate,
@@ -44,10 +42,6 @@ test("buildClientLogContext captures diagnostic fields without payroll values", 
   );
 });
 
-test("diag returns a plain value without backend access", () => {
-  assert.equal(diag(), 123);
-});
-
 test("getBackendHealthStatus returns response status when backend is reachable", async () => {
   const status = await getBackendHealthStatus("https://example.test", async (url) => {
     assert.equal(url, "https://example.test/health");
@@ -63,31 +57,6 @@ test("getBackendHealthStatus returns -1 when fetch fails", async () => {
   });
 
   assert.equal(status, -1);
-});
-
-test("diagLoadDetail posts known-good lookup values", async () => {
-  const value = await diagLoadDetail(async (url, options) => {
-    assert.equal(
-      url,
-      "https://hca-calc-engine.onrender.com/payroll/load-detail?userKey=vavrinec%40xf1advisory.com&outputKey=payroll.output.401k&periodEndDate=2026-04-30&unitId=EX18"
-    );
-    assert.equal(options, undefined);
-    return {
-      ok: true,
-      status: 200,
-      json: async () => ({ status: "found", value: 432.365 }),
-    };
-  });
-
-  assert.equal(value, 432.365);
-});
-
-test("diagLoadDetail returns -1 when known-good lookup request fails", async () => {
-  const value = await diagLoadDetail(async () => {
-    throw new Error("Failed to fetch");
-  });
-
-  assert.equal(value, -1);
 });
 
 test("buildLoadDetailUrl encodes query parameters", () => {
@@ -337,7 +306,7 @@ test("queueLoadDetailLookup works when global setTimeout is unavailable", async 
   }
 });
 
-test("loadDetail uses optional user key override for batch request", async () => {
+test("loadDetail uses optional user key override for single lookup request", async () => {
   const requests = [];
   const previousFetch = globalThis.fetch;
   const previousLocalStorage = globalThis.localStorage;
@@ -347,12 +316,11 @@ test("loadDetail uses optional user key override for batch request", async () =>
     setItem: () => {},
   };
   globalThis.fetch = async (url, options) => {
-    const body = JSON.parse(options.body);
-    requests.push({ url, body });
+    requests.push({ url, options });
     return {
       ok: true,
       status: 200,
-      json: async () => ({ status: "ok", values: [99], foundCount: 1 }),
+      json: async () => ({ status: "found", value: 99 }),
     };
   };
 
@@ -366,17 +334,26 @@ test("loadDetail uses optional user key override for batch request", async () =>
 
     assert.equal(value, 99);
     assert.equal(requests.length, 1);
-    assert.equal(requests[0].url, "https://example.test/payroll/load-detail-batch");
-    assert.equal(requests[0].body.userKey, "override@example.com");
-    assert.deepEqual(requests[0].body.items, [
-      {
-        outputKey: "payroll.output.401k",
-        periodEndDate: "2026-05-31",
-        unitId: "E1",
-      },
-    ]);
+    assert.equal(
+      requests[0].url,
+      "https://example.test/payroll/load-detail?userKey=override%40example.com&outputKey=payroll.output.401k&periodEndDate=2026-05-31&unitId=E1"
+    );
+    assert.equal(requests[0].options, undefined);
   } finally {
     globalThis.fetch = previousFetch;
     globalThis.localStorage = previousLocalStorage;
   }
+});
+
+test("production functions metadata exposes only LOAD_DETAIL", async () => {
+  const metadata = JSON.parse(
+    await import("node:fs/promises").then((fs) =>
+      fs.readFile(new URL("../../public/functions.json", import.meta.url), "utf8")
+    )
+  );
+
+  assert.deepEqual(
+    metadata.functions.map((fn) => fn.id),
+    ["LOAD_DETAIL"]
+  );
 });
